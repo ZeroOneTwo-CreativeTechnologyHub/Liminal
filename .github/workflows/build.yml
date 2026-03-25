@@ -1,0 +1,71 @@
+name: Build and Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install PlatformIO
+        run: pip install platformio
+
+      - name: Build all node firmwares
+        run: pio run
+
+      - name: Copy firmware binaries to docs
+        run: |
+          for i in 0 1 2 3; do
+            ENV="node${i}"
+            SRC=".pio/build/${ENV}"
+            DEST="docs/firmware/node${i}"
+            mkdir -p "${DEST}"
+            cp "${SRC}/firmware.bin" "${DEST}/firmware.bin"
+            cp "${SRC}/bootloader.bin" "${DEST}/bootloader.bin" 2>/dev/null || true
+            cp "${SRC}/partitions.bin" "${DEST}/partitions.bin" 2>/dev/null || true
+            BOOT_APP0="$(find ${HOME}/.platformio -name boot_app0.bin -print -quit 2>/dev/null)"
+            [ -n "${BOOT_APP0}" ] && cp "${BOOT_APP0}" "${DEST}/boot_app0.bin"
+            echo "Node ${i} ready"
+          done
+
+      - name: Generate manifests
+        run: |
+          LABELS=(A B C D)
+          for i in 0 1 2 3; do
+            cat > "docs/firmware/node${i}/manifest.json" << MANIFEST
+          {
+            "name": "LIMINAL Node ${i} (${LABELS[$i]})",
+            "version": "$(date +%Y.%m.%d)",
+            "new_install_prompt_erase": true,
+            "builds": [{
+              "chipFamily": "ESP32",
+              "parts": [
+                { "path": "bootloader.bin", "offset": 4096 },
+                { "path": "partitions.bin", "offset": 32768 },
+                { "path": "boot_app0.bin", "offset": 57344 },
+                { "path": "firmware.bin", "offset": 65536 }
+              ]
+            }]
+          }
+          MANIFEST
+          done
+
+      - name: Commit firmware binaries
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          git add docs/firmware/
+          git diff --staged --quiet || git commit -m "Build firmware $(date +%Y-%m-%d)"
+          git push
