@@ -85,12 +85,12 @@ void onTransmitDone(void) { txDone = true; }
 // ── SETUP ─────────────────────────────────────────────────
 void setup() {
   Serial.begin(115200);
-  delay(1000);  // Give USB CDC time to init on ESP32-S3
+  delay(1500);  // ESP32-S3 USB CDC needs time
 
   // Enable Vext (powers OLED)
   pinMode(VEXT_PIN, OUTPUT);
   digitalWrite(VEXT_PIN, LOW);  // LOW = ON for V3
-  delay(50);
+  delay(100);
 
   // Reset OLED
   pinMode(OLED_RST, OUTPUT);
@@ -110,19 +110,62 @@ void setup() {
   // Init LoRa SPI
   loraSPI.begin(LORA_SCK, LORA_MISO, LORA_MOSI, LORA_CS);
 
-  // Init SX1262
-  Serial.print("LIMINAL:INIT:SX1262...");
-  int state = radio.begin(FREQUENCY, BANDWIDTH, SPREAD_FACTOR, CODING_RATE, SYNC_WORD, TX_POWER, PREAMBLE_LEN);
+  // ─── SX1262 INIT (Heltec V3 specific) ──────────────────
+  Serial.println("LIMINAL:INIT:SX1262...");
+
+  // Step 1: Basic init
+  int state = radio.begin();
   if (state != RADIOLIB_ERR_NONE) {
-    Serial.println("FAILED:" + String(state));
-    oled.drawString(0, 28, "LoRa FAILED! err:" + String(state));
+    Serial.println("begin() FAILED: " + String(state));
+    oled.drawString(0, 28, "begin FAIL:" + String(state));
     oled.display();
     while (1) delay(1000);
   }
-  Serial.println("OK");
+  Serial.println("  begin() OK");
 
-  // Configure SX1262
-  radio.setCRC(true);
+  // Step 2: Enable TCXO — MUST be done before setting frequency etc.
+  state = radio.setTCXO(2.4);
+  if (state != RADIOLIB_ERR_NONE) {
+    Serial.println("  setTCXO WARN: " + String(state));
+    // Don't halt — some board revisions handle this differently
+  } else {
+    Serial.println("  setTCXO OK");
+  }
+
+  // Step 3: DIO2 as RF switch — required for V3 TX/RX switching
+  state = radio.setDio2AsRfSwitch(true);
+  if (state != RADIOLIB_ERR_NONE) {
+    Serial.println("  setDio2 WARN: " + String(state));
+  } else {
+    Serial.println("  setDio2AsRfSwitch OK");
+  }
+
+  // Step 4: Now configure all radio parameters
+  state = radio.setFrequency(FREQUENCY);
+  Serial.println("  setFrequency(" + String(FREQUENCY) + "): " + String(state));
+
+  state = radio.setBandwidth(BANDWIDTH);
+  Serial.println("  setBandwidth: " + String(state));
+
+  state = radio.setSpreadingFactor(SPREAD_FACTOR);
+  Serial.println("  setSpreadingFactor: " + String(state));
+
+  state = radio.setCodingRate(CODING_RATE);
+  Serial.println("  setCodingRate: " + String(state));
+
+  state = radio.setSyncWord(SYNC_WORD);
+  Serial.println("  setSyncWord: " + String(state));
+
+  state = radio.setOutputPower(TX_POWER);
+  Serial.println("  setOutputPower: " + String(state));
+
+  state = radio.setPreambleLength(PREAMBLE_LEN);
+  Serial.println("  setPreambleLength: " + String(state));
+
+  state = radio.setCRC(2);  // CRC type 2 for SX1262
+  Serial.println("  setCRC: " + String(state));
+
+  // Step 5: Set up interrupt
   radio.setDio1Action(onReceive);
 
   // Init peers
@@ -135,15 +178,21 @@ void setup() {
   cycleStart = millis();
 
   // Start listening
-  radio.startReceive();
+  state = radio.startReceive();
+  Serial.println("  startReceive: " + String(state));
 
   Serial.println("LIMINAL:BOOT:" + String(NODE_ID));
+  Serial.println("  Node ID: " + String(NODE_ID));
+  Serial.println("  Freq:    " + String(FREQUENCY) + " MHz");
+  Serial.println("  SF:      " + String(SPREAD_FACTOR));
+  Serial.println("  BW:      " + String(BANDWIDTH) + " kHz");
 
   oled.clear();
   oled.drawString(0, 0, "LIMINAL [" + String(NODE_ID) + "] READY");
   oled.drawString(0, 14, String(FREQUENCY, 0) + " MHz  SF" + String(SPREAD_FACTOR));
   oled.display();
 }
+
 
 // ── TRANSMIT ──────────────────────────────────────────────
 void sendPing() {
@@ -199,8 +248,21 @@ void checkReceive() {
 
 // ── OLED DISPLAY ──────────────────────────────────────────
 void updateDisplay() {
-  if (millis() - lastDisplay < 500) return;
+  if (millis() - lastDisplay < 1000) return;
   lastDisplay = millis();
+
+  // Debug: print peer status to serial
+  Serial.print("LIMINAL:OLED:{");
+  for (int i = 0; i < NUM_NODES; i++) {
+    if (i == NODE_ID) continue;
+    Serial.print("\"p" + String(i) + "\":{");
+    Serial.print("\"active\":" + String(peers[i].active ? "true" : "false"));
+    Serial.print(",\"rssi\":" + String(peers[i].rssi, 1));
+    Serial.print(",\"age\":" + String(millis() - peers[i].lastSeen));
+    Serial.print("}");
+    if (i < NUM_NODES - 1) Serial.print(",");
+  }
+  Serial.println("}");
 
   oled.clear();
   oled.setFont(ArialMT_Plain_10);
@@ -212,21 +274,23 @@ void updateDisplay() {
     int y = 16 + row * 16;
     row++;
 
-    if (!peers[i].active || millis() - peers[i].lastSeen > 5000) {
-      oled.drawString(0, y, "Node " + String(i) + ": --");
-    } else {
-      String line = "Node " + String(i) + ": "
-        + String(peers[i].rssi, 0) + "dBm "
+    // Show data if we've EVER received from this peer
+    if (peers[i].lastSeen > 0) {
+      int r = (int)peers[i].rssi;
+      String line = String(i) + ": "
+        + String(r) + "dBm "
         + String(peers[i].snr, 1) + "dB";
       oled.drawString(0, y, line);
 
-      // Signal bar
-      int barW = map(constrain((int)peers[i].rssi, -120, -30), -120, -30, 2, 40);
+      int barW = constrain(map(r, -120, -30, 2, 50), 2, 50);
       oled.fillRect(90, y + 2, barW, 8);
+    } else {
+      oled.drawString(0, y, String(i) + ": --");
     }
   }
   oled.display();
 }
+
 
 // ── MAIN LOOP ─────────────────────────────────────────────
 void loop() {
