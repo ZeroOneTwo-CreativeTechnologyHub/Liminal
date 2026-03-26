@@ -2,21 +2,201 @@
 <html lang="en">
 <head>
 <meta charset="utf-8"><title>LIMINAL Visualiser</title>
-<style>*{margin:0;padding:0;box-sizing:border-box}body{background:#0a0a0f;overflow:hidden;font-family:'Courier New',monospace}#hud{position:fixed;top:16px;left:16px;color:#8af;font-size:11px;pointer-events:none;z-index:10;line-height:1.6}#hud h1{font-size:14px;color:#cdf;letter-spacing:4px;font-weight:400}#hud .dim{color:#456}#mode{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);color:#345;font-size:11px;letter-spacing:2px;pointer-events:none}</style>
+<style>*{margin:0;padding:0;box-sizing:border-box}body{background:#0a0a0f;overflow:hidden;font-family:'Courier New',monospace}#hud{position:fixed;top:16px;left:16px;color:#8af;font-size:11px;pointer-events:none;z-index:10;line-height:1.6}#hud h1{font-size:14px;color:#cdf;letter-spacing:4px;font-weight:400}#hud .dim{color:#456}#pairs{position:fixed;top:16px;right:16px;color:#8af;font-size:10px;pointer-events:none;z-index:10;text-align:right;line-height:1.8}#mode{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);color:#345;font-size:11px;letter-spacing:2px;pointer-events:none}</style>
 </head>
 <body>
 <div id="hud"><h1>LIMINAL</h1><div class="dim" id="status">connecting...</div></div>
+<div id="pairs"></div>
 <div id="mode">SIMULATION</div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
 <script>
 var WS_URL="ws://localhost:8765",COLS=48,ROWS=36,LABELS=["A","B","C","D"],PAIRS=[];
 for(var i=0;i<4;i++)for(var j=i+1;j<4;j++)PAIRS.push([i,j]);
 var nodes=[],grid=[],rssi={},wsConn=null,live=false,mx=-9e3,my=-9e3,time=0;
-function setup(){createCanvas(windowWidth,windowHeight);pixelDensity(1);var cx=width/2,cy=height/2,rx=width*.32,ry=height*.32;nodes=[{x:cx-rx,y:cy-ry},{x:cx+rx,y:cy-ry},{x:cx+rx,y:cy+ry},{x:cx-rx,y:cy+ry}];for(var p=0;p<PAIRS.length;p++)rssi[PAIRS[p][0]+"-"+PAIRS[p][1]]=-40;for(var r=0;r<ROWS;r++){grid[r]=[];for(var c=0;c<COLS;c++)grid[r][c]={z:0,vel:0};}connectWS();}
-function windowResized(){resizeCanvas(windowWidth,windowHeight);var cx=width/2,cy=height/2,rx=width*.32,ry=height*.32;nodes[0].x=cx-rx;nodes[0].y=cy-ry;nodes[1].x=cx+rx;nodes[1].y=cy-ry;nodes[2].x=cx+rx;nodes[2].y=cy+ry;nodes[3].x=cx-rx;nodes[3].y=cy+ry;}
-function connectWS(){try{wsConn=new WebSocket(WS_URL);wsConn.onopen=function(){live=true;document.getElementById("status").textContent="LIVE";document.getElementById("mode").textContent="LIVE";document.getElementById("mode").style.color="#4a7";};wsConn.onmessage=function(e){var d=JSON.parse(e.data);if(d.type==="reading")rssi[d.pair]=d.rssi;if(d.type==="snapshot"&&d.readings)for(var k in d.readings)rssi[k]=d.readings[k].rssi;};wsConn.onclose=function(){live=false;setTimeout(connectWS,3000);};wsConn.onerror=function(){live=false;wsConn.close();};}catch(e){setTimeout(connectWS,3000);}}
-function draw(){time+=.016;mx=mouseX;my=mouseY;if(!live){for(var pi=0;pi<PAIRS.length;pi++){var ii=PAIRS[pi][0],jj=PAIRS[pi][1];var base=-35+Math.sin(time*.7+ii*2+jj)*4,a=nodes[ii],b=nodes[jj],dx=b.x-a.x,dy=b.y-a.y,l2=dx*dx+dy*dy;if(l2>0){var t=Math.max(0,Math.min(1,((mx-a.x)*dx+(my-a.y)*dy)/l2)),px=a.x+t*dx,py=a.y+t*dy,d=dist(mx,my,px,py);if(d<130)base-=map(d,0,130,38,0);}rssi[ii+"-"+jj]=base;}}var cw=width/COLS,ch=height/ROWS;for(var r=0;r<ROWS;r++)for(var c=0;c<COLS;c++){var px=(c+.5)*cw,py=(r+.5)*ch,target=0;for(var pi=0;pi<PAIRS.length;pi++){var ii=PAIRS[pi][0],jj=PAIRS[pi][1];var a=nodes[ii],b=nodes[jj],dx=b.x-a.x,dy=b.y-a.y,l2=dx*dx+dy*dy;if(!l2)continue;var t=Math.max(0,Math.min(1,((px-a.x)*dx+(py-a.y)*dy)/l2)),lx=a.x+t*dx,ly=a.y+t*dy,d=dist(px,py,lx,ly);if(d<110)target+=map(d,0,110,1,0)*map(rssi[ii+"-"+jj],-70,-30,-1,1)*14;}if(!live){var cd=dist(px,py,mx,my);if(cd<150)target-=map(cd,0,150,22,0);}target+=Math.sin(time*.4+c*.12+r*.1)*1.8;var cell=grid[r][c];cell.vel+=(target-cell.z)*.045;cell.vel*=.87;cell.z+=cell.vel;}background(10,10,18);for(var r=0;r<ROWS-1;r++)for(var c=0;c<COLS-1;c++){var z=grid[r][c].z,zr=grid[r][c+1].z,zd=grid[r+1][c].z,avg=(z+zr+zd)/3,x=c*cw,y=r*ch;stroke(hsbCSS(map(avg,-22,22,225,155),map(Math.abs(avg),0,18,15,80),map(avg,-22,22,12,55),map(Math.abs(avg),0,12,30,170)/255));strokeWeight(.55);line(x-z*.3,y-z*1.1,x+cw-zr*.3,y-zr*1.1);line(x-z*.3,y-z*1.1,x-zd*.3,y+ch-zd*1.1);}for(var pi=0;pi<PAIRS.length;pi++){var ii=PAIRS[pi][0],jj=PAIRS[pi][1];var sig=map(rssi[ii+"-"+jj],-70,-30,.08,.9),a=nodes[ii],b=nodes[jj];stroke(100,160,255,sig*80);strokeWeight(sig*2.5);drawingContext.setLineDash([3,9]);drawingContext.lineDashOffset=-time*30;line(a.x,a.y,b.x,b.y);drawingContext.setLineDash([]);}for(var n=0;n<4;n++){var nd=nodes[n],p=.6+Math.sin(time*2+n)*.4;noStroke();for(var rr=35;rr>0;rr-=4){fill(90,150,255,map(rr,0,35,25*p,0));ellipse(nd.x,nd.y,rr*2);}fill(190,220,255);ellipse(nd.x,nd.y,9);fill(190,220,255,200);textSize(10);textAlign(CENTER);text("NODE "+LABELS[n],nd.x,nd.y-22);}}
-function hsbCSS(h,s,b,a){var hh=h/60,c=(b/100)*(s/100),x=c*(1-Math.abs(hh%2-1)),m=b/100-c,r,g,bl;if(hh<1){r=c;g=x;bl=0}else if(hh<2){r=x;g=c;bl=0}else if(hh<3){r=0;g=c;bl=x}else if(hh<4){r=0;g=x;bl=c}else if(hh<5){r=x;g=0;bl=c}else{r=c;g=0;bl=x}return'rgba('+~~((r+m)*255)+','+~~((g+m)*255)+','+~~((bl+m)*255)+','+a+')';}
+
+// ── Sensitivity tuning ──────────────────────────────
+var RSSI_MIN = -110;   // weakest signal to visualise
+var RSSI_MAX = -25;   // strongest signal
+var PATH_WIDTH = 220; // how wide each signal path affects the mesh
+var MESH_GAIN = 28;   // how much signal changes deform the mesh
+
+
+function setup(){
+  createCanvas(windowWidth,windowHeight);pixelDensity(1);
+  var cx=width/2,cy=height/2,rx=width*.32,ry=height*.32;
+  nodes=[{x:cx-rx,y:cy-ry},{x:cx+rx,y:cy-ry},{x:cx+rx,y:cy+ry},{x:cx-rx,y:cy+ry}];
+  for(var p=0;p<PAIRS.length;p++)rssi[PAIRS[p][0]+"-"+PAIRS[p][1]]=-60;
+  for(var r=0;r<ROWS;r++){grid[r]=[];for(var c=0;c<COLS;c++)grid[r][c]={z:0,vel:0};}
+  connectWS();
+}
+
+function windowResized(){
+  resizeCanvas(windowWidth,windowHeight);
+  var cx=width/2,cy=height/2,rx=width*.32,ry=height*.32;
+  nodes[0].x=cx-rx;nodes[0].y=cy-ry;
+  nodes[1].x=cx+rx;nodes[1].y=cy-ry;
+  nodes[2].x=cx+rx;nodes[2].y=cy+ry;
+  nodes[3].x=cx-rx;nodes[3].y=cy+ry;
+}
+
+function connectWS(){
+  try{
+    wsConn=new WebSocket(WS_URL);
+    wsConn.onopen=function(){
+      live=true;
+      document.getElementById("status").textContent="LIVE — receiving from nodes";
+      document.getElementById("mode").textContent="LIVE MODE";
+      document.getElementById("mode").style.color="#4a7";
+    };
+    wsConn.onmessage=function(e){
+      var d=JSON.parse(e.data);
+      if(d.type==="reading") rssi[d.pair]=d.rssi;
+      if(d.type==="snapshot"&&d.readings)
+        for(var k in d.readings) rssi[k]=d.readings[k].rssi;
+    };
+    wsConn.onclose=function(){
+      live=false;
+      document.getElementById("status").textContent="disconnected — reconnecting...";
+      document.getElementById("mode").textContent="OFFLINE";
+      document.getElementById("mode").style.color="#f66";
+      setTimeout(connectWS,3000);
+    };
+    wsConn.onerror=function(){live=false;wsConn.close();};
+  }catch(e){setTimeout(connectWS,3000);}
+}
+
+function draw(){
+  time+=.016;mx=mouseX;my=mouseY;
+
+  // Simulation fallback when no live data
+  if(!live){
+    for(var pi=0;pi<PAIRS.length;pi++){
+      var ii=PAIRS[pi][0],jj=PAIRS[pi][1];
+      var base=-50+Math.sin(time*.7+ii*2+jj)*6;
+      var a=nodes[ii],b=nodes[jj],dx=b.x-a.x,dy=b.y-a.y,l2=dx*dx+dy*dy;
+      if(l2>0){
+        var t=Math.max(0,Math.min(1,((mx-a.x)*dx+(my-a.y)*dy)/l2));
+        var px=a.x+t*dx,py=a.y+t*dy,d=dist(mx,my,px,py);
+        if(d<160) base-=map(d,0,160,40,0);
+      }
+      rssi[ii+"-"+jj]=base;
+    }
+  }
+
+  // ── Update grid ────────────────────────────────────
+  var cw=width/COLS,ch=height/ROWS;
+  for(var r=0;r<ROWS;r++){
+    for(var c=0;c<COLS;c++){
+      var px=(c+.5)*cw,py=(r+.5)*ch,target=0;
+      for(var pi=0;pi<PAIRS.length;pi++){
+        var ii=PAIRS[pi][0],jj=PAIRS[pi][1];
+        var a=nodes[ii],b=nodes[jj],dx=b.x-a.x,dy=b.y-a.y,l2=dx*dx+dy*dy;
+        if(!l2) continue;
+        var t=Math.max(0,Math.min(1,((px-a.x)*dx+(py-a.y)*dy)/l2));
+        var lx=a.x+t*dx,ly=a.y+t*dy,d=dist(px,py,lx,ly);
+        if(d<PATH_WIDTH){
+          var strength=map(d,0,PATH_WIDTH,1,0);
+          var sig=map(rssi[ii+"-"+jj],RSSI_MIN,RSSI_MAX,-1,1);
+          target += strength * sig * MESH_GAIN;
+        }
+      }
+      if(!live){
+        var cd=dist(px,py,mx,my);
+        if(cd<180) target-=map(cd,0,180,24,0);
+      }
+      target+=Math.sin(time*.4+c*.12+r*.1)*1.5;
+      var cell=grid[r][c];
+      cell.vel+=(target-cell.z)*.04;
+      cell.vel*=.88;
+      cell.z+=cell.vel;
+    }
+  }
+
+  // ── Draw mesh ──────────────────────────────────────
+  background(10,10,18);
+  for(var r=0;r<ROWS-1;r++){
+    for(var c=0;c<COLS-1;c++){
+      var z=grid[r][c].z,zr=grid[r][c+1].z,zd=grid[r+1][c].z;
+      var avg=(z+zr+zd)/3,x=c*cw,y=r*ch;
+      stroke(hsbCSS(
+        map(avg,-25,25,225,155),
+        map(Math.abs(avg),0,20,15,85),
+        map(avg,-25,25,12,60),
+        map(Math.abs(avg),0,14,30,180)/255
+      ));
+      strokeWeight(0.6);
+      line(x-z*.3,y-z*1.1, x+cw-zr*.3,y-zr*1.1);
+      line(x-z*.3,y-z*1.1, x-zd*.3,y+ch-zd*1.1);
+    }
+  }
+
+  // ── Draw signal paths ──────────────────────────────
+  for(var pi=0;pi<PAIRS.length;pi++){
+    var ii=PAIRS[pi][0],jj=PAIRS[pi][1];
+    var sig=map(rssi[ii+"-"+jj],RSSI_MIN,RSSI_MAX,0.05,1.0);
+    var a=nodes[ii],b=nodes[jj];
+
+    // Path line
+    stroke(100,160,255,sig*100);
+    strokeWeight(sig*3);
+    drawingContext.setLineDash([3,9]);
+    drawingContext.lineDashOffset=-time*30;
+    line(a.x,a.y,b.x,b.y);
+    drawingContext.setLineDash([]);
+
+    // dBm label at midpoint
+    var mx2=(a.x+b.x)/2, my2=(a.y+b.y)/2;
+    noStroke();
+    fill(100,160,255,sig*150);
+    textSize(9);
+    textAlign(CENTER,CENTER);
+    text(rssi[ii+"-"+jj].toFixed(0)+"dBm",mx2,my2-10);
+  }
+
+  // ── Draw nodes ─────────────────────────────────────
+  for(var n=0;n<4;n++){
+    var nd=nodes[n],p=.6+Math.sin(time*2+n)*.4;
+    noStroke();
+    for(var rr=35;rr>0;rr-=4){
+      fill(90,150,255,map(rr,0,35,25*p,0));
+      ellipse(nd.x,nd.y,rr*2);
+    }
+    fill(190,220,255);
+    ellipse(nd.x,nd.y,9);
+    fill(190,220,255,200);
+    textSize(10);textAlign(CENTER);
+    text("NODE "+LABELS[n],nd.x,nd.y-22);
+
+    // Activity LED
+    fill(100,220,150,p*200);
+    ellipse(nd.x+20,nd.y-18,5);
+  }
+
+  // ── HUD: pair readings ─────────────────────────────
+  if(frameCount%10===0) updateHUD();
+}
+
+function updateHUD(){
+  var h="";
+  for(var pi=0;pi<PAIRS.length;pi++){
+    var ii=PAIRS[pi][0],jj=PAIRS[pi][1];
+    var v=rssi[ii+"-"+jj];
+    var w=map(v,RSSI_MIN,RSSI_MAX,4,60);
+    var c=v<-70?"#f66":v<-55?"#fa6":"#8af";
+    h+='<div style="display:flex;justify-content:flex-end;align-items:center;gap:6px">';
+    h+='<span style="color:'+c+'">'+LABELS[ii]+'\u2194'+LABELS[jj]+' '+v.toFixed(0)+'dBm</span>';
+    h+='<div style="height:3px;width:'+w+'px;background:'+c+';border-radius:2px"></div>';
+    h+='</div>';
+  }
+  document.getElementById("pairs").innerHTML=h;
+}
+
+function hsbCSS(h,s,b,a){
+  var hh=h/60,c=(b/100)*(s/100),x=c*(1-Math.abs(hh%2-1)),m=b/100-c,r,g,bl;
+  if(hh<1){r=c;g=x;bl=0}else if(hh<2){r=x;g=c;bl=0}else if(hh<3){r=0;g=c;bl=x}
+  else if(hh<4){r=0;g=x;bl=c}else if(hh<5){r=x;g=0;bl=c}else{r=c;g=0;bl=x}
+  return'rgba('+~~((r+m)*255)+','+~~((g+m)*255)+','+~~((bl+m)*255)+','+a+')';
+}
 </script>
 </body>
 </html>
