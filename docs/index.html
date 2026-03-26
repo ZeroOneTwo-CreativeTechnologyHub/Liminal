@@ -3,107 +3,341 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>LIMINAL</title>
+<title>LIMINAL — LoRa Radio-Space Sensing</title>
+<meta name="description" content="Turn 4 LoRa nodes into a real-time radio topology sensor. See the invisible electromagnetic architecture of physical space.">
 <script type="module" src="https://unpkg.com/esp-web-tools@10/dist/web/install-button.js?module"></script>
 <style>
-  :root { --bg:#0a0a12; --surface:#12122a; --border:#1a1a3a; --text:#c9d1d9; --dim:#456; --accent:#7aa2f7; --green:#9ece6a; --red:#f7768e; --yellow:#e0af68; }
-  *{margin:0;padding:0;box-sizing:border-box}
-  body{background:var(--bg);color:var(--text);font-family:'Courier New',monospace}
-  a{color:var(--accent);text-decoration:none} a:hover{text-decoration:underline}
-  .header{padding:40px 24px 0;max-width:960px;margin:0 auto}
-  .header h1{font-size:28px;font-weight:400;letter-spacing:8px;color:#cdf}
-  .header .sub{color:var(--dim);font-size:12px;margin-top:4px}
-  .header .tagline{color:var(--text);font-size:13px;margin-top:16px;line-height:1.7;max-width:640px}
-  .tabs{display:flex;gap:2px;max-width:960px;margin:24px auto 0;padding:0 24px;border-bottom:1px solid var(--border);flex-wrap:wrap}
-  .tab{padding:10px 18px;font-size:11px;letter-spacing:1px;font-family:inherit;background:none;color:var(--dim);border:none;border-bottom:2px solid transparent;cursor:pointer}
-  .tab.active{color:var(--accent);background:var(--surface);border-bottom-color:var(--accent)}
-  .tab:hover{color:var(--accent)}
-  .content{max-width:960px;margin:0 auto;padding:24px}
-  .flash-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-top:16px}
-  .flash-card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:20px;text-align:center}
-  .flash-card h3{color:var(--accent);font-size:14px;font-weight:400;letter-spacing:2px}
-  .flash-card .nid{font-size:48px;color:#cdf;margin:12px 0}
-  .flash-card p{color:var(--dim);font-size:11px;margin-bottom:16px}
-  esp-web-install-button button{background:var(--accent);color:var(--bg);border:none;padding:10px 24px;border-radius:4px;font-family:inherit;font-size:12px;letter-spacing:1px;cursor:pointer}
-  .flash-note{margin-top:20px;padding:16px;background:var(--surface);border:1px solid var(--border);border-radius:8px;font-size:11px;color:var(--dim);line-height:1.7}
-  .flash-note strong{color:var(--yellow)}
-  .serial-controls{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
-  .serial-controls button,.serial-controls select{background:var(--surface);color:var(--text);border:1px solid var(--border);padding:8px 16px;border-radius:4px;font-family:inherit;font-size:11px;cursor:pointer}
-  .serial-controls button.connected{border-color:var(--green);color:var(--green)}
-  #serial-output{background:#000;border:1px solid var(--border);border-radius:8px;padding:16px;font-size:11px;height:400px;overflow-y:auto;line-height:1.6;white-space:pre-wrap}
+  :root {
+    --bg: #0a0a12; --surface: rgba(12,12,30,0.88); --surface-solid: #0c0c1e;
+    --border: rgba(30,30,60,0.6); --text: #c9d1d9; --dim: #456;
+    --accent: #7aa2f7; --green: #9ece6a; --red: #f7768e; --yellow: #e0af68;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:var(--bg); color:var(--text); font-family:'Courier New',monospace; overflow-x:hidden; }
+  a { color:var(--accent); text-decoration:none; }
+  a:hover { text-decoration:underline; }
+
+  #viz-bg { position:fixed; top:0; left:0; width:100%; height:100%; z-index:0; }
+  #viz-bg canvas { width:100%; height:100%; display:block; }
+  .viz-fade { position:fixed; bottom:0; left:0; width:100%; height:40%; z-index:1; background:linear-gradient(to top, var(--bg) 0%, transparent 100%); pointer-events:none; }
+
+  .page { position:relative; z-index:2; }
+
+  .hero { min-height:100vh; display:flex; flex-direction:column; justify-content:center; padding:40px 32px; max-width:720px; }
+  .hero h1 { font-size:clamp(28px,5vw,48px); font-weight:400; letter-spacing:10px; color:#cdf; line-height:1.1; }
+  .hero .sub { font-size:11px; color:var(--dim); margin-top:8px; letter-spacing:3px; }
+  .hero .tagline { font-size:clamp(13px,2vw,15px); line-height:1.8; margin-top:24px; max-width:540px; }
+  .hero .tagline em { color:var(--accent); font-style:normal; }
+  .hero-hint { margin-top:40px; font-size:10px; color:var(--dim); letter-spacing:2px; display:flex; align-items:center; gap:8px; }
+  .hero-hint .arrow { animation:bounce 2s infinite; display:inline-block; }
+  @keyframes bounce { 0%,100%{transform:translateY(0)} 50%{transform:translateY(4px)} }
+  .cta-row { display:flex; gap:12px; margin-top:24px; flex-wrap:wrap; }
+  .cta { padding:10px 24px; border-radius:4px; font-family:inherit; font-size:12px; letter-spacing:1px; cursor:pointer; border:none; text-decoration:none; display:inline-block; }
+  .cta-primary { background:var(--accent); color:var(--bg); }
+  .cta-secondary { background:transparent; color:var(--accent); border:1px solid var(--accent); }
+
+  .section { max-width:800px; margin:0 auto; padding:80px 32px; }
+  .section h2 { font-size:16px; font-weight:400; letter-spacing:4px; color:var(--accent); margin-bottom:24px; padding-bottom:12px; border-bottom:1px solid var(--border); }
+  .section p, .section li { font-size:13px; line-height:1.8; }
+  .section ul { padding-left:20px; margin-top:8px; }
+
+  .flash-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(180px,1fr)); gap:14px; margin-top:16px; }
+  .flash-card { background:var(--surface-solid); border:1px solid var(--border); border-radius:8px; padding:20px; text-align:center; }
+  .flash-card h3 { color:var(--accent); font-size:13px; font-weight:400; letter-spacing:2px; }
+  .flash-card .nid { font-size:42px; color:#cdf; margin:8px 0; }
+  .flash-card p { color:var(--dim); font-size:10px; margin-bottom:14px; }
+  esp-web-install-button button { background:var(--accent); color:var(--bg); border:none; padding:9px 20px; border-radius:4px; font-family:inherit; font-size:11px; letter-spacing:1px; cursor:pointer; }
+  .flash-note { margin-top:20px; padding:14px; background:var(--surface-solid); border:1px solid var(--border); border-radius:8px; font-size:11px; color:var(--dim); line-height:1.7; }
+  .flash-note strong { color:var(--yellow); }
+
+  .serial-controls { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px; }
+  .serial-controls button, .serial-controls select { background:var(--surface-solid); color:var(--text); border:1px solid var(--border); padding:8px 16px; border-radius:4px; font-family:inherit; font-size:11px; cursor:pointer; }
+  .serial-controls button.connected { border-color:var(--green); color:var(--green); }
+  #serial-output { background:#000; border:1px solid var(--border); border-radius:8px; padding:16px; font-size:11px; height:300px; overflow-y:auto; line-height:1.6; white-space:pre-wrap; }
   .line-data{color:var(--green)} .line-boot{color:var(--yellow)} .line-error{color:var(--red)} .line-other{color:var(--dim)}
-  #demo-container{position:relative;width:100%;height:500px;border-radius:8px;overflow:hidden;border:1px solid var(--border)}
-  #demo-container canvas{width:100%;height:100%}
-  .demo-label{position:absolute;top:12px;left:12px;color:var(--dim);font-size:10px;letter-spacing:2px;pointer-events:none}
-  .setup-section{margin-bottom:32px}
-  .setup-section h2{color:var(--accent);font-size:14px;font-weight:400;letter-spacing:2px;margin-bottom:12px}
-  .setup-section p,.setup-section li{font-size:12px;line-height:1.8}
-  .setup-section ul{padding-left:20px}
-  .setup-section code{background:var(--surface);padding:2px 6px;border-radius:3px;font-size:11px;color:var(--accent)}
-  pre.cb{background:var(--surface);padding:16px;border-radius:8px;font-size:11px;overflow-x:auto;line-height:1.6;margin:8px 0;border:1px solid var(--border)}
-  .arch{background:var(--surface);padding:20px;border-radius:8px;font-size:11px;line-height:1.4;white-space:pre;overflow-x:auto;border:1px solid var(--border);margin:12px 0;color:var(--dim)}
+
+  pre.cb { background:var(--surface-solid); padding:14px; border-radius:8px; font-size:11px; overflow-x:auto; line-height:1.6; margin:8px 0; border:1px solid var(--border); }
+  .arch { background:var(--surface-solid); padding:18px; border-radius:8px; font-size:11px; line-height:1.4; white-space:pre; overflow-x:auto; border:1px solid var(--border); margin:12px 0; color:var(--dim); }
+
+  .nav-dots { position:fixed; right:16px; top:50%; transform:translateY(-50%); z-index:10; display:flex; flex-direction:column; gap:10px; }
+  .nav-dot { width:8px; height:8px; border-radius:50%; background:var(--dim); border:none; cursor:pointer; padding:0; opacity:0.4; transition:all 0.3s; }
+  .nav-dot:hover, .nav-dot.active { opacity:1; background:var(--accent); transform:scale(1.3); }
+
+  .footer { text-align:center; padding:40px 32px; font-size:10px; color:var(--dim); letter-spacing:2px; }
+
+  @media (max-width:600px) {
+    .hero { padding:30px 20px; } .section { padding:60px 20px; }
+    .nav-dots { display:none; } .flash-grid { grid-template-columns:1fr 1fr; }
+  }
 </style>
 </head>
 <body>
-<div class="header">
-  <h1>LIMINAL</h1>
-  <div class="sub">LoRa Radio-Space Sensing · Open Source · MIT</div>
-  <p class="tagline">Turn 4 Heltec V2 LoRa nodes into a real-time radio topology sensor. Instead of sending messages <em>through</em> space, LIMINAL reads the space itself.</p>
-</div>
-<div class="tabs">
-  <button class="tab active" data-tab="flash">Flash Firmware</button>
-  <button class="tab" data-tab="demo">Live Demo</button>
-  <button class="tab" data-tab="serial">Serial Monitor</button>
-  <button class="tab" data-tab="setup">Setup Guide</button>
-  <button class="tab" data-tab="about">About</button>
-</div>
-<div class="content">
 
-<div class="tab-panel" data-panel="flash">
-  <p style="color:var(--dim);font-size:11px;margin-bottom:8px">Connect a Heltec WiFi LoRa 32 V2 via USB-C. Requires <strong style="color:var(--text)">Chrome</strong> or <strong style="color:var(--text)">Edge</strong>.</p>
-  <div class="flash-grid">
-    <div class="flash-card"><h3>NODE A</h3><div class="nid">0</div><p>Top left</p><esp-web-install-button manifest="firmware/node0/manifest.json"><button slot="activate">Flash Node 0</button></esp-web-install-button></div>
-    <div class="flash-card"><h3>NODE B</h3><div class="nid">1</div><p>Top right</p><esp-web-install-button manifest="firmware/node1/manifest.json"><button slot="activate">Flash Node 1</button></esp-web-install-button></div>
-    <div class="flash-card"><h3>NODE C</h3><div class="nid">2</div><p>Bottom right</p><esp-web-install-button manifest="firmware/node2/manifest.json"><button slot="activate">Flash Node 2</button></esp-web-install-button></div>
-    <div class="flash-card"><h3>NODE D</h3><div class="nid">3</div><p>Bottom left</p><esp-web-install-button manifest="firmware/node3/manifest.json"><button slot="activate">Flash Node 3</button></esp-web-install-button></div>
+<div id="viz-bg"><canvas id="viz-canvas"></canvas></div>
+<div class="viz-fade"></div>
+
+<nav class="nav-dots">
+  <button class="nav-dot active" title="Top" onclick="scrollTo({top:0,behavior:'smooth'})"></button>
+  <button class="nav-dot" title="Flash" onclick="document.getElementById('flash').scrollIntoView({behavior:'smooth'})"></button>
+  <button class="nav-dot" title="Serial" onclick="document.getElementById('serial').scrollIntoView({behavior:'smooth'})"></button>
+  <button class="nav-dot" title="Setup" onclick="document.getElementById('setup').scrollIntoView({behavior:'smooth'})"></button>
+  <button class="nav-dot" title="About" onclick="document.getElementById('about').scrollIntoView({behavior:'smooth'})"></button>
+</nav>
+
+<div class="page">
+
+  <div class="hero">
+    <h1>LIMINAL</h1>
+    <div class="sub">LoRa Radio-Space Sensing &middot; Heltec V3 &middot; Open Source</div>
+    <p class="tagline">
+      Turn 4 LoRa nodes into a sensor that maps the <em>invisible electromagnetic
+      architecture</em> of a room. The mesh behind this text is a live simulation —
+      move your cursor to see how a human body distorts radio space.
+    </p>
+    <div class="cta-row">
+      <a class="cta cta-primary" href="#flash">Flash Firmware</a>
+      <a class="cta cta-secondary" href="https://github.com/ZeroOneTwo-CreativeTechnologyHub/Liminal">GitHub</a>
+    </div>
+    <div class="hero-hint"><span class="arrow">&#8595;</span> Scroll to get started</div>
   </div>
-  <div class="flash-note"><strong>First time?</strong> Hold BOOT button while plugging in USB. If not detected, install <a href="https://www.silabs.com/developers/usb-to-uart-bridge-vcp-drivers" target="_blank">CP210x drivers</a>.<br><br><strong>Frequency:</strong> Defaults to 868 MHz (EU/UK). For US/AU, clone repo and change FREQUENCY to 915E6.</div>
+
+  <!-- FLASH -->
+  <div class="section" id="flash">
+    <h2>FLASH FIRMWARE</h2>
+    <p>Connect a <strong>Heltec WiFi LoRa 32 V3</strong> via USB-C and click the button for the node you want to flash. Requires <strong>Chrome</strong> or <strong>Edge</strong> on desktop. Flash each of your 4 boards with a different Node ID.</p>
+    <div class="flash-grid">
+      <div class="flash-card"><h3>NODE A</h3><div class="nid">0</div><p>Top left</p><esp-web-install-button manifest="firmware/node0/manifest.json"><button slot="activate">Flash Node 0</button></esp-web-install-button></div>
+      <div class="flash-card"><h3>NODE B</h3><div class="nid">1</div><p>Top right</p><esp-web-install-button manifest="firmware/node1/manifest.json"><button slot="activate">Flash Node 1</button></esp-web-install-button></div>
+      <div class="flash-card"><h3>NODE C</h3><div class="nid">2</div><p>Bottom right</p><esp-web-install-button manifest="firmware/node2/manifest.json"><button slot="activate">Flash Node 2</button></esp-web-install-button></div>
+      <div class="flash-card"><h3>NODE D</h3><div class="nid">3</div><p>Bottom left</p><esp-web-install-button manifest="firmware/node3/manifest.json"><button slot="activate">Flash Node 3</button></esp-web-install-button></div>
+    </div>
+    <div class="flash-note">
+      <strong>Board not detected?</strong> Hold the <code>BOOT</code> button while plugging in USB-C, then try again.
+      If still not showing, install <a href="https://www.silabs.com/developers/usb-to-uart-bridge-vcp-drivers" target="_blank">CP210x drivers</a>.
+      <br><br>
+      <strong>Frequency:</strong> Firmware is set to 868 MHz (EU/UK). For US/AU regions, see the
+      <a href="https://github.com/ZeroOneTwo-CreativeTechnologyHub/Liminal">GitHub repo</a> for instructions on changing to 915 MHz.
+    </div>
+  </div>
+
+  <!-- SERIAL -->
+  <div class="section" id="serial">
+    <h2>SERIAL MONITOR</h2>
+    <p style="margin-bottom:12px;font-size:12px;color:var(--dim)">Debug your nodes directly in the browser. Plug in a flashed Heltec V3 via USB and click Connect.</p>
+    <div class="serial-controls">
+      <button id="serial-connect">Connect Serial</button>
+      <select id="serial-baud"><option>115200</option><option>9600</option></select>
+      <button id="serial-clear">Clear</button>
+    </div>
+    <div id="serial-output">Waiting for connection...</div>
+  </div>
+
+  <!-- SETUP -->
+  <div class="section" id="setup">
+    <h2>RUN THE VISUALISER</h2>
+
+    <p>After flashing all 4 boards, here's how to get the live visualiser running.</p>
+
+    <p style="margin-top:20px"><strong style="color:var(--accent)">1 — Position the nodes.</strong>
+    Place the 4 boards at the corners of your space, 5&ndash;10 metres apart, at waist height (~1m).
+    Node 0 stays plugged into your laptop. The other 3 run on USB power banks.
+    Each OLED shows live signal strength to its peers.</p>
+
+    <div class="arch">    [A]                          [B]
+     ●──────── 5-10m ────────────●
+     │                            │
+   5-10m    your space          5-10m
+     │      waist height          │
+     │                            │
+     ●──────── 5-10m ────────────●
+    [D]                          [C]</div>
+
+    <p style="margin-top:20px"><strong style="color:var(--accent)">2 — Install the bridge.</strong>
+    You need Python 3 (pre-installed on macOS). Open a terminal and run:</p>
+    <pre class="cb">pip3 install pyserial websockets</pre>
+
+    <p style="margin-top:12px">Then download the project files:</p>
+    <pre class="cb">git clone https://github.com/ZeroOneTwo-CreativeTechnologyHub/Liminal.git
+cd Liminal</pre>
+
+    <p style="margin-top:20px"><strong style="color:var(--accent)">3 — Start the bridge.</strong>
+    With Node 0 plugged into USB:</p>
+    <pre class="cb">python3 bridge/bridge.py</pre>
+    <p style="margin-top:4px;font-size:11px;color:var(--dim)">Leave this running. It reads radio data from Node 0 and sends it to the visualiser.</p>
+
+    <p style="margin-top:20px"><strong style="color:var(--accent)">4 — Open the visualiser.</strong>
+    In a new terminal tab:</p>
+    <pre class="cb">open visualiser/index.html</pre>
+    <p style="margin-top:4px;font-size:11px;color:var(--dim)">Or double-click the file in Finder. The top-left should say LIVE. Now walk between the nodes and watch the mesh respond.</p>
+  </div>
+
+  <!-- ABOUT -->
+  <div class="section" id="about">
+    <h2>ABOUT</h2>
+    <p>Most LoRa projects treat radio as a transparent pipe. LIMINAL inverts this — the radio link <em>is</em> the data. By watching how signal strength changes across 6 node-to-node paths, the system builds a living map of radio energy flowing through physical space and being disrupted by the bodies within it.</p>
+    <p style="margin-top:12px">Built at <a href="https://github.com/ZeroOneTwo-CreativeTechnologyHub">Zero One Two Creative Technology Hub</a> using <a href="https://heltec.org/project/wifi-lora-32-v3/">Heltec WiFi LoRa 32 V3</a> boards (ESP32-S3 + SX1262). Under &pound;20 per node.</p>
+
+    <h2 style="margin-top:48px">EXTEND IT</h2>
+    <ul>
+      <li><strong>Sonification</strong> — map 6 signal pairs to oscillators; movement becomes music</li>
+      <li><strong>Projection mapping</strong> — overlay the mesh on physical space with a floor projector</li>
+      <li><strong>Recording</strong> — CSV logging in bridge.py for playback and analysis</li>
+      <li><strong>Occupancy sensing</strong> — classify RSSI patterns to count people</li>
+      <li><strong>Multi-room</strong> — chain spaces by sharing border nodes</li>
+    </ul>
+  </div>
+
+  <div class="footer">
+    LIMINAL &middot; MIT Licence &middot; <a href="https://github.com/ZeroOneTwo-CreativeTechnologyHub/Liminal">Source on GitHub</a>
+  </div>
 </div>
 
-<div class="tab-panel" data-panel="demo" style="display:none">
-  <p style="color:var(--dim);font-size:11px;margin-bottom:12px">Simulation — cursor = human body in radio field.</p>
-  <div id="demo-container"><canvas id="demo-canvas"></canvas><div class="demo-label">CURSOR = HUMAN BODY IN RADIO SPACE</div></div>
-</div>
-
-<div class="tab-panel" data-panel="serial" style="display:none">
-  <div class="serial-controls"><button id="serial-connect">Connect Serial</button><select id="serial-baud"><option>115200</option><option>9600</option></select><button id="serial-clear">Clear</button></div>
-  <div id="serial-output">Click "Connect Serial" and select your Heltec V2 port.</div>
-</div>
-
-<div class="tab-panel" data-panel="setup" style="display:none">
-  <div class="setup-section"><h2>HARDWARE</h2><ul><li>4 x Heltec WiFi LoRa 32 V2</li><li>USB-C cables (1 min for bridge)</li><li>3 x USB power banks</li><li>LoRa antennas</li></ul></div>
-  <div class="setup-section"><h2>STEP 1 — FLASH</h2><p>Use the Flash Firmware tab, or build from source:</p><pre class="cb">pio run -e node0 -t upload</pre></div>
-  <div class="setup-section"><h2>STEP 2 — PLACE NODES</h2><p>Corners of sensing area, 3-15m apart, waist height.</p></div>
-  <div class="setup-section"><h2>STEP 3 — RUN BRIDGE</h2><pre class="cb">pip install pyserial websockets
-python bridge/bridge.py</pre></div>
-  <div class="setup-section"><h2>STEP 4 — VISUALISE</h2><p>Open visualiser/index.html in Chrome.</p></div>
-</div>
-
-<div class="tab-panel" data-panel="about" style="display:none">
-  <div class="setup-section"><h2>CONCEPT</h2><p>4 nodes ping each other via LoRa TDMA. RSSI/SNR for all 6 pairs maps how radio energy flows through space and is disrupted by bodies.</p></div>
-  <div class="setup-section"><h2>LICENCE</h2><p>MIT — use, remix, exhibit, teach.</p><p style="margin-top:8px"><a href="https://github.com/YOUR_USER/liminal">GitHub</a></p></div>
-</div>
-
-</div>
-
+<!-- SERIAL MONITOR -->
 <script>
-document.querySelectorAll('.tab').forEach(function(btn){btn.addEventListener('click',function(){document.querySelectorAll('.tab').forEach(function(t){t.classList.remove('active')});document.querySelectorAll('.tab-panel').forEach(function(p){p.style.display='none'});btn.classList.add('active');document.querySelector('[data-panel="'+btn.dataset.tab+'"]').style.display='block';if(btn.dataset.tab==='demo')initDemo();});});
+(function(){
+  var out=document.getElementById("serial-output");
+  var btn=document.getElementById("serial-connect");
+  var baud=document.getElementById("serial-baud");
+  var port,reader;
+  btn.addEventListener("click",async function(){
+    if(port){if(reader)reader.cancel();await port.close();port=null;btn.textContent="Connect Serial";btn.classList.remove("connected");return;}
+    try{
+      port=await navigator.serial.requestPort();
+      await port.open({baudRate:parseInt(baud.value)});
+      btn.textContent="Disconnect";btn.classList.add("connected");out.textContent="Connected!\n";
+      var dec=new TextDecoderStream();port.readable.pipeTo(dec.writable);reader=dec.readable.getReader();
+      while(true){var r=await reader.read();if(r.done)break;var lines=r.value.split("\n");
+        for(var i=0;i<lines.length;i++){var line=lines[i].trim();if(!line)continue;
+          var span=document.createElement("span");
+          if(line.indexOf("LIMINAL:DATA:")>-1)span.className="line-data";
+          else if(line.indexOf("LIMINAL:BOOT:")>-1)span.className="line-boot";
+          else if(line.indexOf("ERROR")>-1)span.className="line-error";
+          else span.className="line-other";
+          span.textContent=line+"\n";out.appendChild(span);out.scrollTop=out.scrollHeight;}}
+    }catch(e){out.textContent+="Error: "+e.message+"\n";port=null;btn.textContent="Connect Serial";btn.classList.remove("connected");}
+  });
+  document.getElementById("serial-clear").addEventListener("click",function(){out.textContent="";});
+})();
 </script>
+
+<!-- LIVE VISUALISER BACKGROUND -->
 <script>
-(function(){var out=document.getElementById('serial-output'),btn=document.getElementById('serial-connect'),baud=document.getElementById('serial-baud');var port,reader;btn.addEventListener('click',async function(){if(port){if(reader)reader.cancel();await port.close();port=null;btn.textContent='Connect Serial';btn.classList.remove('connected');return;}try{port=await navigator.serial.requestPort();await port.open({baudRate:parseInt(baud.value)});btn.textContent='Disconnect';btn.classList.add('connected');out.textContent='Connected!\n';var dec=new TextDecoderStream();port.readable.pipeTo(dec.writable);reader=dec.readable.getReader();while(true){var r=await reader.read();if(r.done)break;var lines=r.value.split('\n');for(var i=0;i<lines.length;i++){var line=lines[i].trim();if(!line)continue;var span=document.createElement('span');if(line.indexOf('LIMINAL:DATA:')>-1)span.className='line-data';else if(line.indexOf('LIMINAL:BOOT:')>-1)span.className='line-boot';else if(line.indexOf('ERROR')>-1)span.className='line-error';else span.className='line-other';span.textContent=line+'\n';out.appendChild(span);out.scrollTop=out.scrollHeight;}}}catch(e){out.textContent+='Error: '+e.message+'\n';port=null;btn.textContent='Connect Serial';btn.classList.remove('connected');}});document.getElementById('serial-clear').addEventListener('click',function(){out.textContent='';});})();
-</script>
-<script>
-var demoInit=false;function initDemo(){if(demoInit)return;demoInit=true;var el=document.getElementById('demo-canvas'),ctx=el.getContext('2d');var COLS=40,ROWS=30,PAIRS=[],LABELS=["A","B","C","D"];for(var i=0;i<4;i++)for(var j=i+1;j<4;j++)PAIRS.push([i,j]);var nodes=[],grid=[],rssi={},time=0,mx=-9e3,my=-9e3;function resize(){var r=el.parentElement.getBoundingClientRect();el.width=r.width;el.height=r.height;var cx=el.width/2,cy=el.height/2,rx=el.width*.32,ry=el.height*.32;nodes=[{x:cx-rx,y:cy-ry},{x:cx+rx,y:cy-ry},{x:cx+rx,y:cy+ry},{x:cx-rx,y:cy+ry}];}resize();window.addEventListener('resize',resize);for(var p=0;p<PAIRS.length;p++)rssi[PAIRS[p][0]+'-'+PAIRS[p][1]]=-40;for(var r=0;r<ROWS;r++){grid[r]=[];for(var c=0;c<COLS;c++)grid[r][c]={z:0,vel:0};}el.addEventListener('mousemove',function(e){var r=el.getBoundingClientRect();mx=e.clientX-r.left;my=e.clientY-r.top;});el.addEventListener('touchmove',function(e){var t=e.touches[0],r=el.getBoundingClientRect();mx=t.clientX-r.left;my=t.clientY-r.top;},{passive:true});function dist(x1,y1,x2,y2){return Math.sqrt((x2-x1)*(x2-x1)+(y2-y1)*(y2-y1));}function mp(v,a,b,c,d){var vv=Math.min(Math.max(v,Math.min(a,b)),Math.max(a,b));return c+(vv-a)/(b-a)*(d-c);}function hsb(h,s,b,a){var hh=h/60,c=(b/100)*(s/100),x=c*(1-Math.abs(hh%2-1)),m=b/100-c,r1,g1,b1;if(hh<1){r1=c;g1=x;b1=0}else if(hh<2){r1=x;g1=c;b1=0}else if(hh<3){r1=0;g1=c;b1=x}else if(hh<4){r1=0;g1=x;b1=c}else if(hh<5){r1=x;g1=0;b1=c}else{r1=c;g1=0;b1=x}return'rgba('+~~((r1+m)*255)+','+~~((g1+m)*255)+','+~~((b1+m)*255)+','+a+')';}function frame(){time+=.016;var W=el.width,H=el.height;if(!W||!H){requestAnimationFrame(frame);return;}for(var pi=0;pi<PAIRS.length;pi++){var ii=PAIRS[pi][0],jj=PAIRS[pi][1];var base=-35+Math.sin(time*.7+ii*2+jj)*4;var a=nodes[ii],b=nodes[jj],dx=b.x-a.x,dy=b.y-a.y,len2=dx*dx+dy*dy;if(len2>0){var t=Math.max(0,Math.min(1,((mx-a.x)*dx+(my-a.y)*dy)/len2)),px=a.x+t*dx,py=a.y+t*dy,d=dist(mx,my,px,py);if(d<130)base-=mp(d,0,130,38,0);}rssi[ii+'-'+jj]=base;}var cw=W/COLS,ch=H/ROWS;for(var r=0;r<ROWS;r++)for(var c=0;c<COLS;c++){var px=(c+.5)*cw,py=(r+.5)*ch,target=0;for(var pi=0;pi<PAIRS.length;pi++){var ii=PAIRS[pi][0],jj=PAIRS[pi][1];var a=nodes[ii],b=nodes[jj],dx=b.x-a.x,dy=b.y-a.y,len2=dx*dx+dy*dy;if(!len2)continue;var t=Math.max(0,Math.min(1,((px-a.x)*dx+(py-a.y)*dy)/len2)),lx=a.x+t*dx,ly=a.y+t*dy,d=dist(px,py,lx,ly);if(d<110)target+=mp(d,0,110,1,0)*mp(rssi[ii+'-'+jj],-70,-30,-1,1)*14;}var cd=dist(px,py,mx,my);if(cd<150)target-=mp(cd,0,150,22,0);target+=Math.sin(time*.4+c*.12+r*.1)*1.8;var cell=grid[r][c];cell.vel+=(target-cell.z)*.045;cell.vel*=.87;cell.z+=cell.vel;}ctx.fillStyle='#0a0a12';ctx.fillRect(0,0,W,H);for(var r=0;r<ROWS-1;r++)for(var c=0;c<COLS-1;c++){var z=grid[r][c].z,zr=grid[r][c+1].z,zd=grid[r+1][c].z,avg=(z+zr+zd)/3,x=c*cw,y=r*ch;ctx.strokeStyle=hsb(mp(avg,-22,22,225,155),mp(Math.abs(avg),0,18,15,80),mp(avg,-22,22,12,55),mp(Math.abs(avg),0,12,30,170)/255);ctx.lineWidth=.55;ctx.beginPath();ctx.moveTo(x-z*.3,y-z*1.1);ctx.lineTo(x+cw-zr*.3,y-zr*1.1);ctx.stroke();ctx.beginPath();ctx.moveTo(x-z*.3,y-z*1.1);ctx.lineTo(x-zd*.3,y+ch-zd*1.1);ctx.stroke();}for(var pi=0;pi<PAIRS.length;pi++){var ii=PAIRS[pi][0],jj=PAIRS[pi][1];var sig=mp(rssi[ii+'-'+jj],-70,-30,.08,.9),a=nodes[ii],b=nodes[jj];ctx.strokeStyle='rgba(100,160,255,'+sig*.35+')';ctx.lineWidth=sig*2.5;ctx.setLineDash([3,9]);ctx.lineDashOffset=-time*30;ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();ctx.setLineDash([]);}for(var n=0;n<4;n++){var nd=nodes[n],pulse=.6+Math.sin(time*2+n)*.4;for(var rr=35;rr>0;rr-=4){ctx.fillStyle='rgba(90,150,255,'+mp(rr,0,35,.1*pulse,0)+')';ctx.beginPath();ctx.arc(nd.x,nd.y,rr,0,Math.PI*2);ctx.fill();}ctx.fillStyle='#bcdcff';ctx.beginPath();ctx.arc(nd.x,nd.y,4.5,0,Math.PI*2);ctx.fill();ctx.fillStyle='rgba(190,220,255,0.8)';ctx.font="10px 'Courier New'";ctx.textAlign='center';ctx.fillText('NODE '+LABELS[n],nd.x,nd.y-22);}requestAnimationFrame(frame);}requestAnimationFrame(frame);}
+(function(){
+  var el=document.getElementById("viz-canvas");
+  var ctx=el.getContext("2d");
+  var COLS=44,ROWS=32,PAIRS=[],LABELS=["A","B","C","D"];
+  for(var i=0;i<4;i++)for(var j=i+1;j<4;j++)PAIRS.push([i,j]);
+  var nodes=[],grid=[],rssi={},time=0,mx=-9e3,my=-9e3;
+
+  function resize(){
+    el.width=window.innerWidth;el.height=window.innerHeight;
+    var cx=el.width/2,cy=el.height/2,rx=el.width*.34,ry=el.height*.34;
+    nodes=[{x:cx-rx,y:cy-ry},{x:cx+rx,y:cy-ry},{x:cx+rx,y:cy+ry},{x:cx-rx,y:cy+ry}];
+  }
+  resize();window.addEventListener("resize",resize);
+
+  for(var p=0;p<PAIRS.length;p++)rssi[PAIRS[p][0]+"-"+PAIRS[p][1]]=-50;
+  for(var r=0;r<ROWS;r++){grid[r]=[];for(var c=0;c<COLS;c++)grid[r][c]={z:0,vel:0};}
+
+  window.addEventListener("mousemove",function(e){mx=e.clientX;my=e.clientY;});
+  window.addEventListener("touchmove",function(e){mx=e.touches[0].clientX;my=e.touches[0].clientY;},{passive:true});
+
+  function dist(x1,y1,x2,y2){return Math.sqrt((x2-x1)*(x2-x1)+(y2-y1)*(y2-y1));}
+  function mp(v,a,b,c,d){var vv=Math.min(Math.max(v,Math.min(a,b)),Math.max(a,b));return c+(vv-a)/(b-a)*(d-c);}
+  function hsb(h,s,b,a){var hh=h/60,c=(b/100)*(s/100),x=c*(1-Math.abs(hh%2-1)),m=b/100-c,r1,g1,b1;if(hh<1){r1=c;g1=x;b1=0}else if(hh<2){r1=x;g1=c;b1=0}else if(hh<3){r1=0;g1=c;b1=x}else if(hh<4){r1=0;g1=x;b1=c}else if(hh<5){r1=x;g1=0;b1=c}else{r1=c;g1=0;b1=x}return"rgba("+~~((r1+m)*255)+","+~~((g1+m)*255)+","+~~((b1+m)*255)+","+a+")";}
+
+  function frame(){
+    time+=0.016;
+    var W=el.width,H=el.height;
+    if(!W||!H){requestAnimationFrame(frame);return;}
+
+    for(var pi=0;pi<PAIRS.length;pi++){
+      var ii=PAIRS[pi][0],jj=PAIRS[pi][1];
+      var base=-50+Math.sin(time*0.7+ii*2+jj)*6;
+      var a=nodes[ii],b=nodes[jj],dx=b.x-a.x,dy=b.y-a.y,len2=dx*dx+dy*dy;
+      if(len2>0){
+        var t=Math.max(0,Math.min(1,((mx-a.x)*dx+(my-a.y)*dy)/len2));
+        var px=a.x+t*dx,py=a.y+t*dy,d=dist(mx,my,px,py);
+        if(d<160)base-=mp(d,0,160,40,0);
+      }
+      rssi[ii+"-"+jj]=base;
+    }
+
+    var cw=W/COLS,ch=H/ROWS;
+    for(var r=0;r<ROWS;r++){
+      for(var c=0;c<COLS;c++){
+        var px=(c+0.5)*cw,py=(r+0.5)*ch,target=0;
+        for(var pi=0;pi<PAIRS.length;pi++){
+          var ii=PAIRS[pi][0],jj=PAIRS[pi][1];
+          var a=nodes[ii],b=nodes[jj],dx=b.x-a.x,dy=b.y-a.y,len2=dx*dx+dy*dy;
+          if(!len2)continue;
+          var t=Math.max(0,Math.min(1,((px-a.x)*dx+(py-a.y)*dy)/len2));
+          var lx=a.x+t*dx,ly=a.y+t*dy,d=dist(px,py,lx,ly);
+          if(d<180)target+=mp(d,0,180,1,0)*mp(rssi[ii+"-"+jj],-90,-25,-1,1)*18;
+        }
+        var cd=dist(px,py,mx,my);
+        if(cd<180)target-=mp(cd,0,180,24,0);
+        target+=Math.sin(time*0.4+c*0.12+r*0.1)*1.5;
+        var cell=grid[r][c];
+        cell.vel+=(target-cell.z)*0.04;
+        cell.vel*=0.88;
+        cell.z+=cell.vel;
+      }
+    }
+
+    ctx.fillStyle="#0a0a12";ctx.fillRect(0,0,W,H);
+
+    for(var r=0;r<ROWS-1;r++){
+      for(var c=0;c<COLS-1;c++){
+        var z=grid[r][c].z,zr=grid[r][c+1].z,zd=grid[r+1][c].z;
+        var avg=(z+zr+zd)/3,x=c*cw,y=r*ch;
+        ctx.strokeStyle=hsb(mp(avg,-25,25,225,155),mp(Math.abs(avg),0,20,15,85),mp(avg,-25,25,12,60),mp(Math.abs(avg),0,14,30,180)/255);
+        ctx.lineWidth=0.6;
+        ctx.beginPath();ctx.moveTo(x-z*0.3,y-z*1.1);ctx.lineTo(x+cw-zr*0.3,y-zr*1.1);ctx.stroke();
+        ctx.beginPath();ctx.moveTo(x-z*0.3,y-z*1.1);ctx.lineTo(x-zd*0.3,y+ch-zd*1.1);ctx.stroke();
+      }
+    }
+
+    for(var pi=0;pi<PAIRS.length;pi++){
+      var ii=PAIRS[pi][0],jj=PAIRS[pi][1];
+      var sig=mp(rssi[ii+"-"+jj],-90,-25,0.05,1.0);
+      var a=nodes[ii],b=nodes[jj];
+      ctx.strokeStyle="rgba(100,160,255,"+sig*0.3+")";
+      ctx.lineWidth=sig*2.5;
+      ctx.setLineDash([3,10]);ctx.lineDashOffset=-time*25;
+      ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
+    for(var n=0;n<4;n++){
+      var nd=nodes[n],pulse=0.5+Math.sin(time*2+n)*0.4;
+      for(var rr=30;rr>0;rr-=5){
+        ctx.fillStyle="rgba(90,150,255,"+mp(rr,0,30,0.08*pulse,0)+")";
+        ctx.beginPath();ctx.arc(nd.x,nd.y,rr,0,Math.PI*2);ctx.fill();
+      }
+      ctx.fillStyle="#bcdcff";
+      ctx.beginPath();ctx.arc(nd.x,nd.y,3.5,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle="rgba(190,220,255,0.5)";
+      ctx.font="9px 'Courier New'";ctx.textAlign="center";
+      ctx.fillText("NODE "+LABELS[n],nd.x,nd.y-18);
+    }
+
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+
+  var dots=document.querySelectorAll(".nav-dot");
+  var sections=["flash","serial","setup","about"];
+  window.addEventListener("scroll",function(){
+    var st=window.scrollY,wh=window.innerHeight;
+    var active=0;
+    for(var i=0;i<sections.length;i++){
+      var el=document.getElementById(sections[i]);
+      if(el&&el.offsetTop-wh*0.5<st)active=i+1;
+    }
+    for(var i=0;i<dots.length;i++)dots[i].classList.toggle("active",i===active);
+  });
+})();
 </script>
 </body>
 </html>
