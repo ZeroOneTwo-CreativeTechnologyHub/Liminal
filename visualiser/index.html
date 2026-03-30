@@ -2,31 +2,232 @@
 <html lang="en">
 <head>
 <meta charset="utf-8"><title>LIMINAL Visualiser</title>
-<style>*{margin:0;padding:0;box-sizing:border-box}body{background:#0a0a0f;overflow:hidden;font-family:'Courier New',monospace}#hud{position:fixed;top:16px;left:16px;color:#8af;font-size:11px;pointer-events:none;z-index:10;line-height:1.6}#hud h1{font-size:14px;color:#cdf;letter-spacing:4px;font-weight:400}#hud .dim{color:#456}#pairs{position:fixed;top:16px;right:16px;color:#8af;font-size:10px;pointer-events:none;z-index:10;text-align:right;line-height:1.8}#mode{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);color:#345;font-size:11px;letter-spacing:2px;pointer-events:none}</style>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0a0a0f;overflow:hidden;font-family:'Courier New',monospace}
+#hud{position:fixed;top:16px;left:16px;color:#8af;font-size:11px;pointer-events:none;z-index:10;line-height:1.6}
+#hud h1{font-size:14px;color:#cdf;letter-spacing:4px;font-weight:400}
+#hud .dim{color:#456}
+#pairs{position:fixed;top:16px;right:16px;color:#8af;font-size:10px;pointer-events:none;z-index:10;text-align:right;line-height:1.8}
+#mode{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);color:#345;font-size:11px;letter-spacing:2px;pointer-events:none;z-index:10}
+#cal-badge{position:fixed;top:56px;left:16px;font-size:10px;letter-spacing:1px;pointer-events:none;z-index:10;transition:opacity 0.5s}
+
+/* Settings panel */
+#settings{
+  position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
+  background:rgba(10,10,20,0.95);border:1px solid #1a1a3a;border-radius:12px;
+  padding:24px 28px;z-index:100;width:360px;
+  display:none;font-size:11px;color:#c9d1d9;
+  backdrop-filter:blur(10px);
+}
+#settings h2{font-size:13px;font-weight:400;letter-spacing:3px;color:#7aa2f7;margin-bottom:16px}
+#settings .row{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+#settings .row label{color:#8af;flex-shrink:0;width:100px}
+#settings .row input[type=range]{flex:1;margin:0 10px;accent-color:#7aa2f7}
+#settings .row .val{color:#cdf;min-width:44px;text-align:right;font-size:10px}
+#settings .divider{border:none;border-top:1px solid #1a1a3a;margin:14px 0}
+#settings .toggle-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+#settings .toggle-row label{color:#8af}
+.switch{position:relative;width:36px;height:20px;display:inline-block}
+.switch input{opacity:0;width:0;height:0}
+.switch span{position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background:#333;border-radius:10px;transition:0.3s}
+.switch input:checked+span{background:#7aa2f7}
+.switch span:before{content:"";position:absolute;height:14px;width:14px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:0.3s}
+.switch input:checked+span:before{transform:translateX(16px)}
+#settings .hint{color:#456;font-size:9px;line-height:1.5;margin-top:8px}
+#settings .close-hint{color:#345;font-size:9px;text-align:center;margin-top:14px;letter-spacing:1px}
+
+/* Gear icon */
+#gear{
+  position:fixed;bottom:16px;right:16px;z-index:20;
+  width:28px;height:28px;cursor:pointer;opacity:0.25;
+  transition:opacity 0.3s;display:flex;align-items:center;justify-content:center;
+}
+#gear:hover{opacity:0.7}
+#gear svg{width:18px;height:18px}
+</style>
 </head>
 <body>
 <div id="hud"><h1>LIMINAL</h1><div class="dim" id="status">connecting...</div></div>
+<div id="cal-badge" style="color:#9ece6a;opacity:0">AUTO-CALIBRATED</div>
 <div id="pairs"></div>
 <div id="mode">SIMULATION</div>
+
+<!-- Gear icon -->
+<div id="gear" onclick="toggleSettings()">
+  <svg viewBox="0 0 24 24" fill="none" stroke="#8af" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/>
+  </svg>
+</div>
+
+<!-- Settings panel -->
+<div id="settings">
+  <h2>SETTINGS</h2>
+
+  <div class="toggle-row">
+    <label>Auto-calibrate</label>
+    <label class="switch"><input type="checkbox" id="auto-toggle" checked onchange="onAutoToggle(this.checked)"><span></span></label>
+  </div>
+  <div class="hint" id="auto-hint">Sensitivity range adapts to the signals being received. Disable to set manually.</div>
+
+  <hr class="divider">
+
+  <div class="row">
+    <label>RSSI min</label>
+    <input type="range" id="sl-min" min="-120" max="-50" value="-110" oninput="onManualChange()">
+    <span class="val" id="v-min">-110</span>
+  </div>
+  <div class="row">
+    <label>RSSI max</label>
+    <input type="range" id="sl-max" min="-60" max="0" value="-25" oninput="onManualChange()">
+    <span class="val" id="v-max">-25</span>
+  </div>
+
+  <hr class="divider">
+
+  <div class="row">
+    <label>Path width</label>
+    <input type="range" id="sl-pw" min="80" max="400" value="220" oninput="onManualChange()">
+    <span class="val" id="v-pw">220</span>
+  </div>
+  <div class="row">
+    <label>Mesh gain</label>
+    <input type="range" id="sl-gain" min="5" max="60" value="28" oninput="onManualChange()">
+    <span class="val" id="v-gain">28</span>
+  </div>
+
+  <hr class="divider">
+
+  <div class="hint">
+    <strong style="color:#e0af68">Tuning tips:</strong><br>
+    <strong>Mesh flat?</strong> Increase gain. Move nodes further apart.<br>
+    <strong>Weak paths invisible?</strong> Lower RSSI min.<br>
+    <strong>Too noisy?</strong> Reduce path width or gain.
+  </div>
+
+  <div class="close-hint">Press S or click gear to close</div>
+</div>
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
 <script>
 var WS_URL="ws://localhost:8765",COLS=48,ROWS=36,LABELS=["A","B","C","D"],PAIRS=[];
 for(var i=0;i<4;i++)for(var j=i+1;j<4;j++)PAIRS.push([i,j]);
 var nodes=[],grid=[],rssi={},wsConn=null,live=false,mx=-9e3,my=-9e3,time=0;
 
-// ── Sensitivity tuning ──────────────────────────────
-var RSSI_MIN = -110;   // weakest signal to visualise
-var RSSI_MAX = -25;   // strongest signal
-var PATH_WIDTH = 220; // how wide each signal path affects the mesh
-var MESH_GAIN = 28;   // how much signal changes deform the mesh
+// ── Tuning parameters ────────────────────────────────
+var RSSI_MIN = -110;
+var RSSI_MAX = -25;
+var PATH_WIDTH = 220;
+var MESH_GAIN = 28;
 
+// ── Auto-calibration state ───────────────────────────
+var autoCalibrate = true;
+var calMin = 0;
+var calMax = -200;
+var calSamples = 0;
+var calSettled = false;
+var CAL_WARMUP = 40;  // samples before applying
+var CAL_MARGIN = 8;   // dB padding on each end
 
+// ── Settings panel ───────────────────────────────────
+var settingsOpen = false;
+
+function toggleSettings() {
+  settingsOpen = !settingsOpen;
+  document.getElementById("settings").style.display = settingsOpen ? "block" : "none";
+}
+
+function onAutoToggle(on) {
+  autoCalibrate = on;
+  document.getElementById("sl-min").disabled = on;
+  document.getElementById("sl-max").disabled = on;
+  document.getElementById("auto-hint").textContent = on
+    ? "Sensitivity range adapts to the signals being received. Disable to set manually."
+    : "Manual mode. Adjust RSSI min/max to match your environment.";
+  if (on) {
+    calSamples = 0;
+    calMin = 0;
+    calMax = -200;
+    calSettled = false;
+  }
+}
+
+function onManualChange() {
+  if (!autoCalibrate) {
+    RSSI_MIN = parseInt(document.getElementById("sl-min").value);
+    RSSI_MAX = parseInt(document.getElementById("sl-max").value);
+  }
+  PATH_WIDTH = parseInt(document.getElementById("sl-pw").value);
+  MESH_GAIN = parseInt(document.getElementById("sl-gain").value);
+  document.getElementById("v-min").textContent = document.getElementById("sl-min").value;
+  document.getElementById("v-max").textContent = document.getElementById("sl-max").value;
+  document.getElementById("v-pw").textContent = document.getElementById("sl-pw").value;
+  document.getElementById("v-gain").textContent = document.getElementById("sl-gain").value;
+}
+
+function updateCalibration(rssiVal) {
+  if (!autoCalibrate || !live) return;
+  if (rssiVal < calMax) calMax = rssiVal;  // track weakest
+  if (rssiVal > calMin) calMin = rssiVal;  // track strongest
+  calSamples++;
+
+  if (calSamples >= CAL_WARMUP && !calSettled) {
+    // Apply calibrated range with margin
+    RSSI_MIN = Math.floor(calMax - CAL_MARGIN);
+    RSSI_MAX = Math.ceil(calMin + CAL_MARGIN);
+
+    // Clamp to sane bounds
+    if (RSSI_MIN < -120) RSSI_MIN = -120;
+    if (RSSI_MAX > -10) RSSI_MAX = -10;
+    if (RSSI_MAX - RSSI_MIN < 15) RSSI_MIN = RSSI_MAX - 15;
+
+    // Update sliders to show calibrated values
+    document.getElementById("sl-min").value = RSSI_MIN;
+    document.getElementById("sl-max").value = RSSI_MAX;
+    document.getElementById("v-min").textContent = RSSI_MIN;
+    document.getElementById("v-max").textContent = RSSI_MAX;
+
+    calSettled = true;
+
+    // Flash the badge
+    var badge = document.getElementById("cal-badge");
+    badge.textContent = "AUTO-CALIBRATED: " + RSSI_MIN + " to " + RSSI_MAX + " dBm";
+    badge.style.opacity = "1";
+    setTimeout(function(){ badge.style.opacity = "0"; }, 4000);
+  }
+
+  // Keep slowly adapting after settling
+  if (calSettled && calSamples % 100 === 0) {
+    var newMin = Math.floor(calMax - CAL_MARGIN);
+    var newMax = Math.ceil(calMin + CAL_MARGIN);
+    // Smooth transition
+    RSSI_MIN = Math.round(RSSI_MIN * 0.8 + newMin * 0.2);
+    RSSI_MAX = Math.round(RSSI_MAX * 0.8 + newMax * 0.2);
+    if (RSSI_MAX - RSSI_MIN < 15) RSSI_MIN = RSSI_MAX - 15;
+    document.getElementById("sl-min").value = RSSI_MIN;
+    document.getElementById("sl-max").value = RSSI_MAX;
+    document.getElementById("v-min").textContent = RSSI_MIN;
+    document.getElementById("v-max").textContent = RSSI_MAX;
+  }
+}
+
+// Keyboard shortcut
+document.addEventListener("keydown", function(e) {
+  if (e.key === "s" || e.key === "S") {
+    if (document.activeElement.tagName !== "INPUT") toggleSettings();
+  }
+});
+
+// ── P5.js ────────────────────────────────────────────
 function setup(){
   createCanvas(windowWidth,windowHeight);pixelDensity(1);
   var cx=width/2,cy=height/2,rx=width*.32,ry=height*.32;
   nodes=[{x:cx-rx,y:cy-ry},{x:cx+rx,y:cy-ry},{x:cx+rx,y:cy+ry},{x:cx-rx,y:cy+ry}];
   for(var p=0;p<PAIRS.length;p++)rssi[PAIRS[p][0]+"-"+PAIRS[p][1]]=-60;
   for(var r=0;r<ROWS;r++){grid[r]=[];for(var c=0;c<COLS;c++)grid[r][c]={z:0,vel:0};}
+  // Set initial slider state
+  document.getElementById("sl-min").disabled = true;
+  document.getElementById("sl-max").disabled = true;
   connectWS();
 }
 
@@ -44,19 +245,26 @@ function connectWS(){
     wsConn=new WebSocket(WS_URL);
     wsConn.onopen=function(){
       live=true;
-      document.getElementById("status").textContent="LIVE — receiving from nodes";
+      document.getElementById("status").textContent="LIVE \u2014 receiving from nodes";
       document.getElementById("mode").textContent="LIVE MODE";
       document.getElementById("mode").style.color="#4a7";
     };
     wsConn.onmessage=function(e){
       var d=JSON.parse(e.data);
-      if(d.type==="reading") rssi[d.pair]=d.rssi;
-      if(d.type==="snapshot"&&d.readings)
-        for(var k in d.readings) rssi[k]=d.readings[k].rssi;
+      if(d.type==="reading"){
+        rssi[d.pair]=d.rssi;
+        updateCalibration(d.rssi);
+      }
+      if(d.type==="snapshot"&&d.readings){
+        for(var k in d.readings){
+          rssi[k]=d.readings[k].rssi;
+          updateCalibration(d.readings[k].rssi);
+        }
+      }
     };
     wsConn.onclose=function(){
       live=false;
-      document.getElementById("status").textContent="disconnected — reconnecting...";
+      document.getElementById("status").textContent="disconnected \u2014 reconnecting...";
       document.getElementById("mode").textContent="OFFLINE";
       document.getElementById("mode").style.color="#f66";
       setTimeout(connectWS,3000);
@@ -68,7 +276,6 @@ function connectWS(){
 function draw(){
   time+=.016;mx=mouseX;my=mouseY;
 
-  // Simulation fallback when no live data
   if(!live){
     for(var pi=0;pi<PAIRS.length;pi++){
       var ii=PAIRS[pi][0],jj=PAIRS[pi][1];
@@ -83,7 +290,6 @@ function draw(){
     }
   }
 
-  // ── Update grid ────────────────────────────────────
   var cw=width/COLS,ch=height/ROWS;
   for(var r=0;r<ROWS;r++){
     for(var c=0;c<COLS;c++){
@@ -112,8 +318,8 @@ function draw(){
     }
   }
 
-  // ── Draw mesh ──────────────────────────────────────
   background(10,10,18);
+
   for(var r=0;r<ROWS-1;r++){
     for(var c=0;c<COLS-1;c++){
       var z=grid[r][c].z,zr=grid[r][c+1].z,zd=grid[r+1][c].z;
@@ -130,21 +336,16 @@ function draw(){
     }
   }
 
-  // ── Draw signal paths ──────────────────────────────
   for(var pi=0;pi<PAIRS.length;pi++){
     var ii=PAIRS[pi][0],jj=PAIRS[pi][1];
     var sig=map(rssi[ii+"-"+jj],RSSI_MIN,RSSI_MAX,0.05,1.0);
     var a=nodes[ii],b=nodes[jj];
-
-    // Path line
     stroke(100,160,255,sig*100);
     strokeWeight(sig*3);
     drawingContext.setLineDash([3,9]);
     drawingContext.lineDashOffset=-time*30;
     line(a.x,a.y,b.x,b.y);
     drawingContext.setLineDash([]);
-
-    // dBm label at midpoint
     var mx2=(a.x+b.x)/2, my2=(a.y+b.y)/2;
     noStroke();
     fill(100,160,255,sig*150);
@@ -153,7 +354,6 @@ function draw(){
     text(rssi[ii+"-"+jj].toFixed(0)+"dBm",mx2,my2-10);
   }
 
-  // ── Draw nodes ─────────────────────────────────────
   for(var n=0;n<4;n++){
     var nd=nodes[n],p=.6+Math.sin(time*2+n)*.4;
     noStroke();
@@ -166,13 +366,10 @@ function draw(){
     fill(190,220,255,200);
     textSize(10);textAlign(CENTER);
     text("NODE "+LABELS[n],nd.x,nd.y-22);
-
-    // Activity LED
     fill(100,220,150,p*200);
     ellipse(nd.x+20,nd.y-18,5);
   }
 
-  // ── HUD: pair readings ─────────────────────────────
   if(frameCount%10===0) updateHUD();
 }
 
