@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LIMINAL — TEI '27 Pictorial</title>
+<style>
+  :root {
+    --bg: #0a0a12; --surface: #12122a; --border: rgba(30,30,60,0.6);
+    --text: #c9d1d9; --dim: #456; --accent: #7aa2f7;
+    --green: #9ece6a; --yellow: #e0af68; --coral: #f7768e;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:var(--bg); color:var(--text); font-family:'Courier New',monospace; }
+  a { color:var(--accent); text-decoration:none; }
+  a:hover { text-decoration:underline; }
+
+  .page { max-width:860px; margin:0 auto; padding:40px 24px 80px; }
+
+  /* Header */
+  .header h1 {
+    font-size:clamp(22px,4vw,36px); font-weight:400; letter-spacing:8px; color:#cdf; line-height:1.2;
+  }
+  .header .sub { color:var(--dim); font-size:12px; margin-top:6px; letter-spacing:2px; }
+  .header .conf {
+    display:inline-block; margin-top:16px; padding:6px 14px;
+    background:var(--surface); border:1px solid var(--border); border-radius:4px;
+    font-size:11px; color:var(--accent); letter-spacing:1px;
+  }
+  .back { display:inline-block; margin-bottom:24px; font-size:11px; color:var(--dim); letter-spacing:1px; }
+  .back:hover { color:var(--accent); }
+
+  /* Abstract */
+  .abstract {
+    margin:32px 0; padding:20px; background:var(--surface);
+    border:1px solid var(--border); border-radius:8px;
+    font-size:12px; line-height:1.8;
+  }
+  .abstract h2 { color:var(--accent); font-size:13px; font-weight:400; letter-spacing:2px; margin-bottom:12px; }
+  .abstract .keywords { color:var(--dim); font-size:11px; margin-top:12px; }
+
+  /* Page sections */
+  .spread {
+    margin:48px 0; padding-bottom:48px;
+    border-bottom:1px solid var(--border);
+  }
+  .spread:last-of-type { border-bottom:none; }
+  .spread-label {
+    font-size:10px; color:var(--dim); letter-spacing:3px; margin-bottom:8px;
+  }
+  .spread h2 {
+    font-size:16px; font-weight:400; letter-spacing:3px; color:var(--accent); margin-bottom:16px;
+  }
+
+  /* Visual concept box */
+  .visual-concept {
+    background:var(--surface); border:1px solid var(--border); border-radius:8px;
+    padding:20px; margin:16px 0;
+  }
+  .visual-concept h3 {
+    font-size:11px; color:var(--yellow); letter-spacing:2px; margin-bottom:10px; font-weight:400;
+  }
+  .visual-concept p { font-size:12px; line-height:1.8; color:var(--text); }
+
+  /* Annotation text */
+  .annotation {
+    border-left:2px solid var(--accent); padding-left:16px; margin:16px 0;
+    font-size:12px; line-height:1.9; color:var(--text); font-style:italic;
+  }
+
+  /* Image checklist */
+  .checklist { margin:16px 0; }
+  .checklist h3 {
+    font-size:11px; color:var(--green); letter-spacing:2px; margin-bottom:8px; font-weight:400;
+  }
+  .checklist li {
+    font-size:11px; line-height:2; color:var(--dim); list-style:none; padding-left:20px; position:relative;
+  }
+  .checklist li:before {
+    content:''; position:absolute; left:0; top:8px;
+    width:12px; height:12px; border:1px solid var(--dim); border-radius:2px;
+  }
+
+  /* Scenario table */
+  .scenarios { width:100%; border-collapse:collapse; margin:16px 0; }
+  .scenarios td {
+    padding:10px 12px; font-size:11px; line-height:1.7;
+    border-bottom:1px solid var(--border); vertical-align:top;
+  }
+  .scenarios td:first-child { color:var(--accent); width:30%; white-space:nowrap; }
+  .scenarios td:last-child { color:var(--text); font-style:italic; }
+
+  /* Column layouts */
+  .triptych { display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px; margin:16px 0; }
+  .triptych-col {
+    background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:16px;
+  }
+  .triptych-col h4 { font-size:11px; color:var(--accent); letter-spacing:1px; margin-bottom:8px; font-weight:400; }
+  .triptych-col p { font-size:11px; line-height:1.7; color:var(--dim); }
+
+  .panels { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin:16px 0; }
+  .panel {
+    background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:16px;
+  }
+  .panel h4 { font-size:11px; color:var(--yellow); letter-spacing:1px; margin-bottom:6px; font-weight:400; }
+  .panel p { font-size:11px; line-height:1.7; color:var(--dim); }
+
+  .steps { display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:12px; margin:16px 0; }
+  .step-card {
+    background:var(--surface); border:1px solid var(--border); border-radius:8px;
+    padding:14px; text-align:center;
+  }
+  .step-card .num { font-size:20px; color:var(--accent); margin-bottom:6px; }
+  .step-card h4 { font-size:11px; color:#cdf; margin-bottom:6px; font-weight:400; }
+  .step-card p { font-size:10px; color:var(--dim); line-height:1.6; }
+
+  /* Sketches for futures */
+  .sketches { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin:16px 0; }
+  .sketch {
+    background:var(--surface); border:1px solid var(--border); border-radius:8px;
+    padding:18px;
+  }
+  .sketch h4 { font-size:12px; color:var(--accent); margin-bottom:6px; font-weight:400; }
+  .sketch p { font-size:11px; color:var(--dim); line-height:1.7; }
+
+  /* References */
+  .references { margin:16px 0; }
+  .references li {
+    font-size:11px; line-height:1.8; color:var(--dim); margin-bottom:4px;
+    list-style:none; padding-left:24px; position:relative;
+  }
+  .references li span { position:absolute; left:0; color:var(--accent); }
+  .references li em { color:var(--text); }
+
+  /* Production checklist */
+  .production {
+    margin-top:48px; padding-top:32px; border-top:1px solid var(--border);
+  }
+  .production h2 {
+    font-size:14px; font-weight:400; letter-spacing:3px; color:var(--yellow); margin-bottom:20px;
+  }
+
+  /* Footer */
+  .footer {
+    text-align:center; padding:40px 0; font-size:10px; color:var(--dim); letter-spacing:2px;
+  }
+
+  @media (max-width:700px) {
+    .triptych { grid-template-columns:1fr; }
+    .panels { grid-template-columns:1fr; }
+    .steps { grid-template-columns:1fr 1fr; }
+    .sketches { grid-template-columns:1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <a href="./" class="back">&larr; Back to LIMINAL</a>
+
+  <div class="header">
+    <h1>LIMINAL</h1>
+    <div class="sub">Sensing the Body Through Radio Space</div>
+    <div class="conf">TEI '27 Pictorial &middot; The Body in Space &middot; Lisbon, January 2027</div>
+  </div>
+
+  <!-- ABSTRACT -->
+  <div class="abstract">
+    <h2>ABSTRACT</h2>
+    <p>We present LIMINAL, an open-source system that renders the invisible electromagnetic topology of a room as a responsive, deformable mesh. The system reveals how the human body distorts radio space through its mere presence. Four low-cost LoRa nodes (~&pound;18 each) are placed at the corners of a space and continuously measure signal strength across all six inter-node paths. When a person moves through the sensing area, their body attenuates radio signals along the paths they cross, producing measurable drops in received signal strength. A real-time browser-based visualiser translates these fluctuations into a living topographic surface. The mesh dips where a body absorbs radio energy and recovers as the person moves on. We describe the system's design, report observations from deployment, and discuss how passive radio sensing reframes the body as an electromagnetic presence: always shaping invisible space, but never before able to see it.</p>
+    <div class="keywords"><strong>Keywords:</strong> radio-frequency sensing, LoRa, embodied interaction, electromagnetic space, RF tomography, open-source hardware, spatial visualisation</div>
+  </div>
+
+  <!-- PAGES 2–3 -->
+  <div class="spread">
+    <div class="spread-label">PAGES 2–3 &middot; SPREAD</div>
+    <h2>The invisible landscape</h2>
+
+    <div class="visual-concept">
+      <h3>VISUAL CONCEPT</h3>
+      <p>Full-bleed spread. Left page: a photograph of an apparently empty room where the system is deployed. Clean, still, nothing visible happening. Right page: the same room from the same angle, overlaid with a semi-transparent capture of the LIMINAL visualiser mesh composited onto the photograph. The mesh should be clearly deforming where a person (visible as a faint silhouette or motion blur) is crossing a signal path.</p>
+    </div>
+
+    <div class="annotation">
+      <p>Every room has an electromagnetic architecture. Radio signals from WiFi routers, Bluetooth devices, and LoRa transmitters fill the space with energy that reflects off walls, passes through doors, and is absorbed by human bodies. This topology is as real as the furniture, but entirely invisible.</p>
+      <p style="margin-top:10px">LIMINAL makes it perceptible. Four radio nodes map six signal paths through a space. When a body enters, the topology deforms. What you see here is not a simulation. It is a live capture of radio energy being disrupted by a person walking through a room.</p>
+    </div>
+
+    <div class="checklist">
+      <h3>IMAGES NEEDED</h3>
+      <ul>
+        <li>Photo: empty deployment room, clean composition, wide angle</li>
+        <li>Photo: same angle, person mid-stride between two nodes</li>
+        <li>Screenshot: visualiser mesh showing clear deformation</li>
+        <li>Composite: mesh overlaid on room photograph</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- PAGES 4–5 -->
+  <div class="spread">
+    <div class="spread-label">PAGES 4–5 &middot; SPREAD</div>
+    <h2>Lineage</h2>
+
+    <div class="visual-concept">
+      <h3>VISUAL CONCEPT</h3>
+      <p>A visual triptych positioning LIMINAL within its design research lineage. Three columns showing the progression from theory to photography to real-time interaction.</p>
+    </div>
+
+    <div class="triptych">
+      <div class="triptych-col">
+        <h4>Hertzian Tales (Dunne, 2005)</h4>
+        <p>The theoretical proposal that electronic objects inhabit invisible radio fields, and that design should engage with this electromagnetic materiality.</p>
+        <p style="margin-top:8px;color:var(--coral);font-size:10px">[Image: Hertzian space diagram. Seek permission or redraw.]</p>
+      </div>
+      <div class="triptych-col">
+        <h4>Immaterials (Arnall et al., 2009–2013)</h4>
+        <p>Long-exposure light-painting revealing WiFi signal strength in urban space. Radio made visible, but as a static, photographic trace.</p>
+        <p style="margin-top:8px;color:var(--coral);font-size:10px">[Image: WiFi light-painting still. Seek permission from Arnall/YOUrban.]</p>
+      </div>
+      <div class="triptych-col">
+        <h4>LIMINAL (2026)</h4>
+        <p>A live visualiser responding to a body in real time. The shift: from theoretical proposal, to photographic revelation, to continuous embodied interaction.</p>
+        <p style="margin-top:8px;color:var(--coral);font-size:10px">[Image: LIMINAL visualiser capture with body-in-space.]</p>
+      </div>
+    </div>
+
+    <div class="annotation">
+      <p>Dunne proposed that electronic objects exist in an invisible "hertzian space" that design largely ignores [1]. Arnall and colleagues developed photographic techniques to reveal the spatial materiality of WiFi and RFID fields, producing evocative images of radio as a fixed condition [2,3]. LIMINAL extends this lineage from image to interaction. The radio landscape is not captured but inhabited, not photographed but felt, sensed continuously through the body's own electromagnetic shadow.</p>
+    </div>
+  </div>
+
+  <!-- PAGES 6–7 -->
+  <div class="spread">
+    <div class="spread-label">PAGES 6–7 &middot; SPREAD</div>
+    <h2>How it works</h2>
+
+    <div class="visual-concept">
+      <h3>VISUAL CONCEPT</h3>
+      <p>Left page: an annotated photograph of the four nodes in situ with dashed lines between all six pairs, labelled with example RSSI values. Right page: the data journey from radio to mesh in four visual steps.</p>
+    </div>
+
+    <!-- System architecture diagram -->
+    <svg width="100%" viewBox="0 0 800 620" style="margin:20px 0;display:block" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <marker id="arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M2 1L8 5L2 9" fill="none" stroke="#7aa2f7" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </marker>
+        <marker id="arr-dim" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M2 1L8 5L2 9" fill="none" stroke="#456" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </marker>
+      </defs>
+
+      <!-- Background zones -->
+      <!-- Radio zone -->
+      <rect x="30" y="20" width="740" height="290" rx="12" fill="#12122a" stroke="#1a1a3a" stroke-width="0.5"/>
+      <text x="50" y="48" fill="#7aa2f7" font-family="'Courier New',monospace" font-size="11" letter-spacing="2" font-weight="500">RADIO SPACE</text>
+      <text x="50" y="64" fill="#456" font-family="'Courier New',monospace" font-size="10">4 nodes, 6 signal paths, 1 second cycle</text>
+
+      <!-- Node A (top left) -->
+      <rect x="100" y="100" width="100" height="70" rx="8" fill="#1a1a3a" stroke="#5DCAA5" stroke-width="1"/>
+      <text x="150" y="128" fill="#cdf" font-family="'Courier New',monospace" font-size="12" text-anchor="middle" font-weight="500">Node A</text>
+      <text x="150" y="146" fill="#5DCAA5" font-family="'Courier New',monospace" font-size="10" text-anchor="middle">ID: 0</text>
+      <text x="150" y="160" fill="#456" font-family="'Courier New',monospace" font-size="9" text-anchor="middle">250ms slot</text>
+      <!-- USB indicator -->
+      <rect x="118" y="170" width="64" height="18" rx="3" fill="#0a0a12" stroke="#9ece6a" stroke-width="0.8"/>
+      <text x="150" y="183" fill="#9ece6a" font-family="'Courier New',monospace" font-size="8" text-anchor="middle">USB to laptop</text>
+
+      <!-- Node B (top right) -->
+      <rect x="560" y="100" width="100" height="70" rx="8" fill="#1a1a3a" stroke="#5DCAA5" stroke-width="1"/>
+      <text x="610" y="128" fill="#cdf" font-family="'Courier New',monospace" font-size="12" text-anchor="middle" font-weight="500">Node B</text>
+      <text x="610" y="146" fill="#5DCAA5" font-family="'Courier New',monospace" font-size="10" text-anchor="middle">ID: 1</text>
+      <text x="610" y="160" fill="#456" font-family="'Courier New',monospace" font-size="9" text-anchor="middle">250ms slot</text>
+
+      <!-- Node C (bottom right) -->
+      <rect x="560" y="220" width="100" height="70" rx="8" fill="#1a1a3a" stroke="#5DCAA5" stroke-width="1"/>
+      <text x="610" y="248" fill="#cdf" font-family="'Courier New',monospace" font-size="12" text-anchor="middle" font-weight="500">Node C</text>
+      <text x="610" y="266" fill="#5DCAA5" font-family="'Courier New',monospace" font-size="10" text-anchor="middle">ID: 2</text>
+      <text x="610" y="280" fill="#456" font-family="'Courier New',monospace" font-size="9" text-anchor="middle">250ms slot</text>
+
+      <!-- Node D (bottom left) -->
+      <rect x="100" y="220" width="100" height="70" rx="8" fill="#1a1a3a" stroke="#5DCAA5" stroke-width="1"/>
+      <text x="150" y="248" fill="#cdf" font-family="'Courier New',monospace" font-size="12" text-anchor="middle" font-weight="500">Node D</text>
+      <text x="150" y="266" fill="#5DCAA5" font-family="'Courier New',monospace" font-size="10" text-anchor="middle">ID: 3</text>
+      <text x="150" y="280" fill="#456" font-family="'Courier New',monospace" font-size="9" text-anchor="middle">250ms slot</text>
+
+      <!-- Signal paths (6 pairs) -->
+      <!-- A-B (top) -->
+      <line x1="200" y1="125" x2="560" y2="125" stroke="#5DCAA5" stroke-width="1" stroke-dasharray="4 6" opacity="0.5"/>
+      <text x="380" y="118" fill="#5DCAA5" font-family="'Courier New',monospace" font-size="9" text-anchor="middle" opacity="0.7">-49 dBm</text>
+      <!-- C-D (bottom) -->
+      <line x1="200" y1="260" x2="560" y2="260" stroke="#5DCAA5" stroke-width="1" stroke-dasharray="4 6" opacity="0.5"/>
+      <text x="380" y="253" fill="#5DCAA5" font-family="'Courier New',monospace" font-size="9" text-anchor="middle" opacity="0.7">-46 dBm</text>
+      <!-- A-D (left) -->
+      <line x1="140" y1="170" x2="140" y2="220" stroke="#5DCAA5" stroke-width="1" stroke-dasharray="4 6" opacity="0.4"/>
+      <text x="115" y="200" fill="#5DCAA5" font-family="'Courier New',monospace" font-size="9" text-anchor="middle" opacity="0.6">-41 dBm</text>
+      <!-- B-C (right) -->
+      <line x1="620" y1="170" x2="620" y2="220" stroke="#5DCAA5" stroke-width="1" stroke-dasharray="4 6" opacity="0.4"/>
+      <text x="656" y="200" fill="#5DCAA5" font-family="'Courier New',monospace" font-size="9" text-anchor="middle" opacity="0.6">-55 dBm</text>
+      <!-- A-C (diagonal) -->
+      <line x1="200" y1="155" x2="560" y2="235" stroke="#5DCAA5" stroke-width="0.8" stroke-dasharray="3 8" opacity="0.25"/>
+      <text x="410" y="188" fill="#5DCAA5" font-family="'Courier New',monospace" font-size="9" text-anchor="middle" opacity="0.5">-74 dBm</text>
+      <!-- B-D (diagonal) -->
+      <line x1="200" y1="240" x2="560" y2="145" stroke="#5DCAA5" stroke-width="0.8" stroke-dasharray="3 8" opacity="0.25"/>
+      <text x="350" y="208" fill="#5DCAA5" font-family="'Courier New',monospace" font-size="9" text-anchor="middle" opacity="0.5">-56 dBm</text>
+
+      <!-- Body silhouette (disrupting A-C diagonal) -->
+      <ellipse cx="380" cy="195" rx="18" ry="35" fill="none" stroke="#f7768e" stroke-width="0.8" stroke-dasharray="2 3" opacity="0.5"/>
+      <text x="380" y="242" fill="#f7768e" font-family="'Courier New',monospace" font-size="9" text-anchor="middle" opacity="0.6">body attenuates signal</text>
+
+      <!-- Data flow arrow: USB down -->
+      <line x1="150" y1="290" x2="150" y2="350" stroke="#7aa2f7" stroke-width="1.5" marker-end="url(#arr)"/>
+      <text x="168" y="324" fill="#456" font-family="'Courier New',monospace" font-size="9">USB serial</text>
+      <text x="168" y="336" fill="#456" font-family="'Courier New',monospace" font-size="8">115200 baud</text>
+
+      <!-- Bridge zone -->
+      <rect x="30" y="350" width="740" height="80" rx="12" fill="#12122a" stroke="#1a1a3a" stroke-width="0.5"/>
+      <text x="50" y="378" fill="#e0af68" font-family="'Courier New',monospace" font-size="11" letter-spacing="2" font-weight="500">BRIDGE</text>
+      <text x="50" y="394" fill="#456" font-family="'Courier New',monospace" font-size="10">Python script, serial reader to WebSocket server</text>
+
+      <!-- Serial JSON sample -->
+      <rect x="200" y="362" width="340" height="28" rx="4" fill="#0a0a12" stroke="#1a1a3a" stroke-width="0.5"/>
+      <text x="210" y="380" fill="#9ece6a" font-family="'Courier New',monospace" font-size="9">LIMINAL:DATA:{"node":0,"peer":1,"rssi":-74.0}</text>
+
+      <!-- WS output label -->
+      <rect x="580" y="366" width="160" height="20" rx="4" fill="#0a0a12" stroke="#1a1a3a" stroke-width="0.5"/>
+      <text x="660" y="380" fill="#7aa2f7" font-family="'Courier New',monospace" font-size="9" text-anchor="middle">ws://localhost:8765</text>
+
+      <!-- Data flow arrow: WS down -->
+      <line x1="400" y1="430" x2="400" y2="480" stroke="#7aa2f7" stroke-width="1.5" marker-end="url(#arr)"/>
+      <text x="418" y="460" fill="#456" font-family="'Courier New',monospace" font-size="9">WebSocket</text>
+
+      <!-- Visualiser zone -->
+      <rect x="30" y="480" width="740" height="120" rx="12" fill="#12122a" stroke="#1a1a3a" stroke-width="0.5"/>
+      <text x="50" y="508" fill="#7aa2f7" font-family="'Courier New',monospace" font-size="11" letter-spacing="2" font-weight="500">VISUALISER</text>
+      <text x="50" y="524" fill="#456" font-family="'Courier New',monospace" font-size="10">P5.js in browser, spring-damped mesh physics</text>
+
+      <!-- Mini mesh illustration -->
+      <g transform="translate(200, 538)" opacity="0.6">
+        <line x1="0" y1="0" x2="40" y2="-2" stroke="#456" stroke-width="0.5"/>
+        <line x1="40" y1="-2" x2="80" y2="-8" stroke="#7aa2f7" stroke-width="0.5"/>
+        <line x1="80" y1="-8" x2="120" y2="-14" stroke="#8af" stroke-width="0.6"/>
+        <line x1="120" y1="-14" x2="160" y2="-12" stroke="#cdf" stroke-width="0.7"/>
+        <line x1="160" y1="-12" x2="200" y2="-6" stroke="#8af" stroke-width="0.6"/>
+        <line x1="200" y1="-6" x2="240" y2="-2" stroke="#7aa2f7" stroke-width="0.5"/>
+        <line x1="240" y1="-2" x2="280" y2="0" stroke="#456" stroke-width="0.5"/>
+        <line x1="280" y1="0" x2="320" y2="1" stroke="#456" stroke-width="0.5"/>
+        <line x1="320" y1="1" x2="360" y2="0" stroke="#456" stroke-width="0.5"/>
+        <!-- Second row -->
+        <line x1="0" y1="12" x2="40" y2="10" stroke="#456" stroke-width="0.5"/>
+        <line x1="40" y1="10" x2="80" y2="4" stroke="#7aa2f7" stroke-width="0.5"/>
+        <line x1="80" y1="4" x2="120" y2="-4" stroke="#cdf" stroke-width="0.7"/>
+        <line x1="120" y1="-4" x2="160" y2="-2" stroke="#8af" stroke-width="0.6"/>
+        <line x1="160" y1="-2" x2="200" y2="4" stroke="#7aa2f7" stroke-width="0.5"/>
+        <line x1="200" y1="4" x2="240" y2="10" stroke="#456" stroke-width="0.5"/>
+        <line x1="240" y1="10" x2="280" y2="12" stroke="#456" stroke-width="0.5"/>
+        <line x1="280" y1="12" x2="320" y2="13" stroke="#456" stroke-width="0.5"/>
+        <line x1="320" y1="13" x2="360" y2="12" stroke="#456" stroke-width="0.5"/>
+        <!-- Verticals -->
+        <line x1="0" y1="0" x2="0" y2="12" stroke="#456" stroke-width="0.3"/>
+        <line x1="40" y1="-2" x2="40" y2="10" stroke="#456" stroke-width="0.3"/>
+        <line x1="80" y1="-8" x2="80" y2="4" stroke="#7aa2f7" stroke-width="0.3"/>
+        <line x1="120" y1="-14" x2="120" y2="-4" stroke="#8af" stroke-width="0.4"/>
+        <line x1="160" y1="-12" x2="160" y2="-2" stroke="#8af" stroke-width="0.4"/>
+        <line x1="200" y1="-6" x2="200" y2="4" stroke="#7aa2f7" stroke-width="0.3"/>
+        <line x1="240" y1="-2" x2="240" y2="10" stroke="#456" stroke-width="0.3"/>
+        <line x1="280" y1="0" x2="280" y2="12" stroke="#456" stroke-width="0.3"/>
+        <line x1="320" y1="1" x2="320" y2="13" stroke="#456" stroke-width="0.3"/>
+        <line x1="360" y1="0" x2="360" y2="12" stroke="#456" stroke-width="0.3"/>
+      </g>
+
+      <!-- Annotation: mesh dip -->
+      <line x1="320" y1="520" x2="320" y2="528" stroke="#f7768e" stroke-width="0.5" stroke-dasharray="2 2"/>
+      <text x="320" y="576" fill="#f7768e" font-family="'Courier New',monospace" font-size="9" text-anchor="middle" opacity="0.7">mesh dips where body crosses signal path</text>
+
+      <!-- Flow labels on right side -->
+      <g transform="translate(700, 100)">
+        <text x="0" y="0" fill="#5DCAA5" font-family="'Courier New',monospace" font-size="9" text-anchor="end">LoRa 868 MHz</text>
+        <text x="0" y="14" fill="#456" font-family="'Courier New',monospace" font-size="8" text-anchor="end">SX1262 radio</text>
+        <text x="0" y="28" fill="#456" font-family="'Courier New',monospace" font-size="8" text-anchor="end">SF7 / 125 kHz</text>
+      </g>
+
+      <g transform="translate(700, 226)">
+        <text x="0" y="0" fill="#456" font-family="'Courier New',monospace" font-size="8" text-anchor="end">6 pairs measured</text>
+        <text x="0" y="14" fill="#456" font-family="'Courier New',monospace" font-size="8" text-anchor="end">every 1 second</text>
+      </g>
+
+      <g transform="translate(700, 500)">
+        <text x="0" y="0" fill="#456" font-family="'Courier New',monospace" font-size="8" text-anchor="end">RSSI per pair</text>
+        <text x="0" y="14" fill="#456" font-family="'Courier New',monospace" font-size="8" text-anchor="end">mapped to grid</text>
+        <text x="0" y="28" fill="#456" font-family="'Courier New',monospace" font-size="8" text-anchor="end">spring + damping</text>
+        <text x="0" y="42" fill="#456" font-family="'Courier New',monospace" font-size="8" text-anchor="end">physics engine</text>
+      </g>
+    </svg>
+
+    <div class="steps">
+      <div class="step-card">
+        <div class="num">1</div>
+        <h4>Radio</h4>
+        <p>Each node pings in a 250ms TDMA slot.</p>
+      </div>
+      <div class="step-card">
+        <div class="num">2</div>
+        <h4>RSSI</h4>
+        <p>Every received ping reports signal strength: -74 dBm.</p>
+      </div>
+      <div class="step-card">
+        <div class="num">3</div>
+        <h4>Bridge</h4>
+        <p>JSON streams over USB to a Python WebSocket bridge.</p>
+      </div>
+      <div class="step-card">
+        <div class="num">4</div>
+        <h4>Mesh</h4>
+        <p>Six RSSI values deform a spring-damped topographic surface.</p>
+      </div>
+    </div>
+
+    <div class="annotation">
+      <p>The system uses time-division multiple access. Each node transmits in a dedicated 250ms slot, completing a full cycle every second. With four nodes, six unique signal paths are measured continuously. A single USB-connected node captures all readings, as it hears the other three directly. The bridge translates serial JSON into a WebSocket stream consumed by a P5.js visualiser, which maps each signal path to a corridor on a 2D mesh grid. Spring-and-damping physics produce smooth, organic deformation. The mesh dips where signal attenuates and recovers as the disruption passes.</p>
+    </div>
+
+    <div class="checklist">
+      <h3>IMAGES NEEDED</h3>
+      <ul>
+        <li>Annotated photo or diagram of 4-node setup with signal paths</li>
+        <li>Close-up photo of Heltec V3 OLED showing RSSI readings</li>
+        <li>Screenshot of bridge terminal output</li>
+        <li>Annotated visualiser screenshot showing mesh physics</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- PAGE 8 -->
+  <div class="spread">
+    <div class="spread-label">PAGE 8 &middot; FULL PAGE</div>
+    <h2>The body as signal</h2>
+
+    <div class="visual-concept">
+      <h3>VISUAL CONCEPT</h3>
+      <p>The key conceptual image. A sequence of 4 to 6 small visualiser captures arranged vertically, each showing a progressive timestep as a person walks across one signal path. The mesh deforms, reaches maximum dip, then recovers. Annotated with timestamps and RSSI values at the midpoint.</p>
+    </div>
+
+    <div class="annotation">
+      <p>The human body is approximately 60% water. Water absorbs radio energy at the frequencies used by LoRa (868 MHz). When a person walks between two nodes, they absorb a measurable fraction of the signal, typically 5 to 15 dB depending on distance, angle, and body mass. This attenuation is the body's radio shadow: proof of electromagnetic presence in a space.</p>
+      <p style="margin-top:10px">LIMINAL does not instrument the body. There are no wearables, no cameras, no markers. The person is sensed entirely through their passive effect on ambient radio topology. The body is not a user of the system. It is the phenomenon the system observes.</p>
+    </div>
+
+    <div class="checklist">
+      <h3>IMAGES NEEDED</h3>
+      <ul>
+        <li>Sequence: 4 to 6 visualiser captures showing person crossing a path over time</li>
+        <li>OR: single high-impact composite of body + mesh deformation</li>
+        <li>Annotated with RSSI values and timestamps</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- PAGE 9 -->
+  <div class="spread">
+    <div class="spread-label">PAGE 9 &middot; FULL PAGE</div>
+    <h2>Observations from deployment</h2>
+
+    <div class="visual-concept">
+      <h3>VISUAL CONCEPT</h3>
+      <p>A grid of annotated visualiser captures from different scenarios. 2&times;3 grid layout, each with a brief observation.</p>
+    </div>
+
+    <table class="scenarios">
+      <tr><td>Empty room</td><td>"Baseline: gentle ambient drift from multipath reflections. The mesh breathes even when nobody is present. Walls, furniture, and atmospheric conditions all shape radio topology."</td></tr>
+      <tr><td>One person walking</td><td>"A single body produces a clear, trackable dip along the path it crosses. Recovery time is roughly two seconds."</td></tr>
+      <tr><td>Person standing still</td><td>"A stationary body creates a persistent depression. The mesh settles around the obstruction like water around a stone."</td></tr>
+      <tr><td>Two people crossing</td><td>"Multiple bodies create overlapping attenuation patterns. The mesh becomes more complex, harder to decompose visually but richer in information."</td></tr>
+      <tr><td>Near a node</td><td>"Proximity to a node produces sharp, localised disruption. The strongest effect occurs when the body is directly between two nodes, not near one."</td></tr>
+      <tr><td>Door opening</td><td>"Architectural changes register. An opening door shifts signal paths measurably. The building is part of the electromagnetic landscape."</td></tr>
+    </table>
+
+    <div class="checklist">
+      <h3>IMAGES NEEDED</h3>
+      <ul>
+        <li>6 visualiser captures, each from a specific documented scenario</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- PAGE 10 -->
+  <div class="spread">
+    <div class="spread-label">PAGE 10 &middot; FULL PAGE</div>
+    <h2>Openness and accessibility</h2>
+
+    <div class="visual-concept">
+      <h3>VISUAL CONCEPT</h3>
+      <p>Four panels showing the system's accessibility at every layer: browser flasher, low-cost hardware, browser visualiser, and self-reporting OLED.</p>
+    </div>
+
+    <div class="panels">
+      <div class="panel">
+        <h4>Browser-based flashing</h4>
+        <p>No development tools required. Chrome and a USB cable. Pre-compiled firmware flashed directly from the project website.</p>
+        <p style="margin-top:8px;color:var(--coral);font-size:10px">[Screenshot: GitHub Pages flasher interface]</p>
+      </div>
+      <div class="panel">
+        <h4>Under &pound;80 total</h4>
+        <p>Four Heltec V3 boards at roughly &pound;18 each. LoRa antennas included. USB power banks for the untethered nodes.</p>
+        <p style="margin-top:8px;color:var(--coral);font-size:10px">[Photo: Heltec V3 with antenna, coin for scale]</p>
+      </div>
+      <div class="panel">
+        <h4>Browser visualiser</h4>
+        <p>Real-time P5.js visualisation. Open source. Auto-calibrates to the signal environment. Runs on any laptop.</p>
+        <p style="margin-top:8px;color:var(--coral);font-size:10px">[Screenshot: visualiser in LIVE mode]</p>
+      </div>
+      <div class="panel">
+        <h4>Self-reporting hardware</h4>
+        <p>Each node's OLED displays its own RSSI readings. The system is legible at every layer without a computer.</p>
+        <p style="margin-top:8px;color:var(--coral);font-size:10px">[Photo: OLED close-up showing readings]</p>
+      </div>
+    </div>
+
+    <div class="annotation">
+      <p>LIMINAL is released as open-source hardware and software under GPL v3. The entire system (firmware, bridge, and visualiser) is contained in a single repository. Pre-compiled firmware can be flashed directly from a browser using ESP Web Tools, eliminating the need for PlatformIO, Arduino IDE, or any embedded development toolchain. The design decision to make the system reproducible without specialist knowledge is deliberate. If electromagnetic space is a civic and creative concern, the tools to perceive it should not be locked behind engineering expertise.</p>
+    </div>
+  </div>
+
+  <!-- PAGE 11 -->
+  <div class="spread">
+    <div class="spread-label">PAGE 11 &middot; FULL PAGE</div>
+    <h2>Implications and futures</h2>
+
+    <div class="sketches">
+      <div class="sketch">
+        <h4>Sonification</h4>
+        <p>Each of the six signal pairs mapped to a Tone.js oscillator. Signal attenuation becomes pitch shift or filter cutoff. Movement becomes involuntary music.</p>
+      </div>
+      <div class="sketch">
+        <h4>Projection mapping</h4>
+        <p>A floor-mounted projector throwing the mesh onto the physical space. The radio topology overlaid on the room it describes. The invisible made spatially co-located.</p>
+      </div>
+      <div class="sketch">
+        <h4>Crowd sensing</h4>
+        <p>Scaling to 12 nodes produces 66 signal paths, sufficient for crowd-density estimation at public events. LoRa reaches 1 to 2 km line of sight outdoors.</p>
+      </div>
+      <div class="sketch">
+        <h4>Multi-room</h4>
+        <p>Chaining spaces by sharing border nodes. Node C in Room 1 becomes Node A in Room 2. Movement flow tracked between adjacent spaces.</p>
+      </div>
+    </div>
+
+    <div class="annotation">
+      <p>The architecture scales. N nodes produce N(N-1)/2 signal paths. With 8 nodes, 28 paths offer sufficient spatial resolution for rough position estimation. With 12, the 66 paths approach true RF tomography: heatmaps of attenuation density that could map crowd flow at festivals, exhibitions, or public spaces.</p>
+      <p style="margin-top:10px">Other modalities extend the perceptual range. Sonification maps radio disruption to sound, creating an audible landscape of presence. Projection mapping closes the loop between the invisible phenomenon and the physical space it occupies. Each extension reframes the same question: what does it mean to be electromagnetically present?</p>
+    </div>
+  </div>
+
+  <!-- REFERENCES -->
+  <div class="spread">
+    <div class="spread-label">PAGE 12</div>
+    <h2>References</h2>
+    <ol class="references">
+      <li><span>[1]</span> Dunne, A. (2005). <em>Hertzian Tales: Electronic Products, Aesthetic Experience, and Critical Design.</em> MIT Press.</li>
+      <li><span>[2]</span> Arnall, T. and Martinussen, E.S. (2010). Depth of Field: Discursive design research through film. <em>FORMakademisk</em>, 3(1).</li>
+      <li><span>[3]</span> Martinussen, E.S., Knutsen, J., and Arnall, T. (2014). Satellite Lamps. <em>Kairos: A Journal of Rhetoric, Technology, and Pedagogy</em>, 19(1).</li>
+      <li><span>[4]</span> Wilson, J. and Patwari, N. (2010). Radio Tomographic Imaging with Wireless Networks. <em>IEEE Transactions on Mobile Computing</em>, 9(5), 621–632.</li>
+      <li><span>[5]</span> Patwari, N. and Wilson, J. (2011). Spatial Models for Human Motion-Induced Signal Strength Variance on Static Links. <em>IEEE Transactions on Information Forensics and Security</em>, 6(3), 791–802.</li>
+      <li><span>[6]</span> Greenfield, A. (2013). <em>Against the Smart City.</em> Do Projects.</li>
+      <li><span>[7]</span> Haque, U. (2004). <em>Sky Ear.</em> [Installation].</li>
+      <li><span>[8]</span> Bridle, J. (2012). <em>Drone Shadows.</em> [Installation/intervention].</li>
+      <li><span>[9]</span> Weiser, M. (1991). The Computer for the 21st Century. <em>Scientific American</em>, 265(3), 94–104.</li>
+      <li><span>[10]</span> Ishii, H. and Ullmer, B. (1997). Tangible Bits: Towards Seamless Interfaces between People, Bits and Atoms. <em>Proceedings of CHI '97</em>, 234–241.</li>
+    </ol>
+  </div>
+
+  <!-- PRODUCTION CHECKLIST -->
+  <div class="production">
+    <h2>PRODUCTION CHECKLIST</h2>
+
+    <div class="checklist">
+      <h3>PHOTO/CAPTURE SHOOT LIST</h3>
+      <ul>
+        <li>Empty deployment room: wide angle, clean, well-lit</li>
+        <li>Same angle with person mid-stride between nodes</li>
+        <li>Four-node setup showing all hardware in situ</li>
+        <li>Close-up: Heltec V3 OLED showing RSSI readings</li>
+        <li>Close-up: Heltec V3 board with antenna (coin for scale)</li>
+        <li>Bridge terminal output screenshot</li>
+        <li>Visualiser: LIVE mode, baseline (no movement)</li>
+        <li>Visualiser: single person crossing a path</li>
+        <li>Visualiser: person standing still in centre</li>
+        <li>Visualiser: two people crossing</li>
+        <li>Visualiser: near-node disruption</li>
+        <li>Visualiser: door opening</li>
+        <li>Visualiser timestep sequence (4 to 6 frames)</li>
+        <li>GitHub Pages flasher interface screenshot</li>
+        <li>Composite: mesh overlaid on room photograph</li>
+      </ul>
+    </div>
+
+    <div class="checklist" style="margin-top:24px">
+      <h3>IMAGE PERMISSIONS NEEDED</h3>
+      <ul>
+        <li>Hertzian Tales diagram: contact MIT Press or redraw</li>
+        <li>Immaterials WiFi light-painting: contact Timo Arnall / YOUrban</li>
+      </ul>
+    </div>
+
+    <div style="margin-top:24px;padding:16px;background:var(--surface);border:1px solid var(--border);border-radius:8px;font-size:11px;line-height:1.8;color:var(--dim)">
+      <strong style="color:var(--yellow)">Format reminders</strong><br>
+      Max 12 pages excluding references<br>
+      Use InDesign template from TEI (or Word/PowerPoint)<br>
+      Double-blind: remove all author names and affiliations<br>
+      Abstract &le; 150 words on page 1<br>
+      Images are primary, text is scaffolding<br>
+      Every image must play a meaningful role, no decoration<br>
+      Aim for roughly 70% visual, 30% text per spread<br>
+      Submit by <strong style="color:var(--coral)">July 31st AoE</strong>
+    </div>
+  </div>
+
+  <div class="footer">
+    LIMINAL &middot; GPL v3 &middot; <a href="./">Back to project</a> &middot; <a href="https://github.com/ZeroOneTwo-CreativeTechnologyHub/Liminal">GitHub</a>
+  </div>
+
+</div>
+</body>
+</html>
